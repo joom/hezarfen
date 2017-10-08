@@ -1,0 +1,4 @@
+package hezarfen
+
+modules = Hezarfen
+        , Hezarfen.Prover
