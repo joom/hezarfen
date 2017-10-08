@@ -39,10 +39,10 @@ concludeWithTopR (Ctx g o) = ZeroInf TopR $ Seq (Ctx g o) Top
 
 insert : Prop -> Context -> Context
 insert p (Ctx g o) = case p of
-  Atom x          => Ctx (p :: g) o
-  Impl (Atom x) b => Ctx (p :: g) o
+  Atom x            => Ctx (p :: g) o
+  Impl (Atom x) b   => Ctx (p :: g) o
   Impl (Impl a b) d => Ctx (p :: g) o
-  _ => Ctx g (p :: o)
+  _                 => Ctx g (p :: o)
 
 appConjR : Context -> (Prop, Prop) -> (Sequent, Sequent)
 appConjR ctx (a, b) = (Seq ctx a, Seq ctx b)
@@ -127,9 +127,9 @@ mutual
         let newgoal = appDisjImplL (Ctx g o) (d, e, b, c) in
         pure $ OneInf DisjImplL !(breakdown newgoal) goal
       Seq (Ctx g []) (Disj a b) =>
-            pure (OneInf DisjL  !(searchSync g (Disj a b)) goal)
-        <|> pure (OneInf DisjR1 !(breakdown (Seq (Ctx g []) a)) goal)
-        <|> pure (OneInf DisjR2 !(breakdown (Seq (Ctx g []) b)) goal)
+            (searchSync g (Disj a b)      >>= \x => pure (OneInf DisjL  x goal))
+        <|> (breakdown (Seq (Ctx g []) a) >>= \x => pure (OneInf DisjR1 x goal))
+        <|> (breakdown (Seq (Ctx g []) b) >>= \x => pure (OneInf DisjR2 x goal))
       Seq (Ctx g []) c => searchSync g c
       _ => empty
 
@@ -168,7 +168,7 @@ propFromType r = case r of
   `(Either ~A ~B) => Disj (propFromType A) (propFromType B)
   `(Unit)         => Top
   `(Void)         => Bot
-  r               => Atom r
+  _               => Atom r
 
 getExpr : (ty : Raw) -> Maybe Raw
 getExpr ty = expFromDeriv <$> prove (propFromType ty)
