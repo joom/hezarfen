@@ -1,7 +1,10 @@
 module Prover
 
+import Language.Reflection.Utils
+%access public export
+
 data Prop =
-  Atom String | Conj Prop Prop | Disj Prop Prop | Impl Prop Prop | Top | Bot
+  Atom Raw | Conj Prop Prop | Disj Prop Prop | Impl Prop Prop | Top | Bot
 
 Eq Prop where
   (Atom x) == (Atom y) = x == y
@@ -158,15 +161,14 @@ expFromDeriv (ZeroInf r s) = ?c
 expFromDeriv (OneInf r d s) = ?c2
 expFromDeriv (TwoInf r d1 d2 s) = ?c3
 
-propFromType : Raw -> Maybe Prop
-propFromType `(~A -> ~B)     = Just $ Impl !(propFromType A) !(propFromType B)
-propFromType `(Pair ~A ~B)   = Just $ Conj !(propFromType A) !(propFromType B)
-propFromType `(Either ~A ~B) = Just $ Disj !(propFromType A) !(propFromType B)
-propFromType `(Unit)         = Just $ Top
-propFromType `(Void)         = Just $ Bot
-propFromType (Var (UN x))    = Just $ Atom x
-propFromType _               = Nothing
+propFromType : Raw -> Prop
+propFromType r = case r of
+  `(~A -> ~B)     => Impl (propFromType A) (propFromType B)
+  `(Pair ~A ~B)   => Conj (propFromType A) (propFromType B)
+  `(Either ~A ~B) => Disj (propFromType A) (propFromType B)
+  `(Unit)         => Top
+  `(Void)         => Bot
+  r               => Atom r
 
-export
 getExpr : (ty : Raw) -> Maybe Raw
-getExpr ty = expFromDeriv <$> prove !(propFromType ty)
+getExpr ty = expFromDeriv <$> prove (propFromType ty)
