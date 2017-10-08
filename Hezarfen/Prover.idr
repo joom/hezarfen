@@ -127,9 +127,9 @@ mutual
         let newgoal = appDisjImplL (Ctx g o) (d, e, b, c) in
         pure $ OneInf DisjImplL !(breakdown newgoal) goal
       Seq (Ctx g []) (Disj a b) =>
-            (searchSync g (Disj a b)      >>= \x => pure (OneInf DisjL  x goal))
-        <|> (breakdown (Seq (Ctx g []) a) >>= \x => pure (OneInf DisjR1 x goal))
-        <|> (breakdown (Seq (Ctx g []) b) >>= \x => pure (OneInf DisjR2 x goal))
+            (OneInf DisjL  <$> searchSync g p)
+        <|> (OneInf DisjR1 <$> breakdown (Seq ctx a))
+        <|> (OneInf DisjR2 <$> breakdown (Seq ctx b)) <*> pure goal
       Seq (Ctx g []) c => searchSync g c
       _ => empty
 
