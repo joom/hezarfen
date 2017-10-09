@@ -15,12 +15,18 @@ theorem prover that generates Haskell expressions, Hezarfen generates Idris expr
 Unlike Djinn, Hezarfen is not a standalone program, it is a library that
 generates Idris expressions of the type `Raw`, one of the types used for the
 inner representation of the core language of Idris. This means these
-expressions can easily be spliced into your programs. Hezarfen will eventually
-provide a tactic that lets you do this:
+expressions can easily be spliced into your programs. Hezarfen provides a
+tactic that lets you do this:
 
 ```idris
-p : (a -> b) -> (c -> d) -> a -> d
-p = %runElab hezarfen
+f2 : (a -> b) -> (b -> c) -> (c -> d) -> a -> d
+f2 = %runElab hezarfen
+
+f5 : (p -> q, p -> r) -> p -> (q, r)
+f5 = %runElab hezarfen
+
+demorgan1 : Not (Either p q) -> (Not p, Not q)
+demorgan1 = %runElab hezarfen
 ```
 
 ***
