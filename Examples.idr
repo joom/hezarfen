@@ -1,6 +1,7 @@
 module Examples
 
 import Hezarfen
+import Hezarfen.Prover
 
 %language ElabReflection
 
@@ -37,3 +38,11 @@ demorgan3 = %runElab hezarfen
 
 noContradiction : Not (p , Not p)
 noContradiction = %runElab hezarfen
+
+-- Examples with default values for some types
+
+n : Nat
+n = %runElab (add [`{Z}] >>= hezarfen')
+
+b : (Bool, a -> a)
+b = %runElab (add [`{True}] >>= hezarfen')

@@ -19,7 +19,8 @@ ctxPart (Ctx xs ys) =
     SubReport $ [TextPart "(", g xs, TextPart "===>",  g ys, TextPart ")"]
   where
     f : (TTName, Ty) -> ErrorReportPart
-    f (n, t) = SubReport [TextPart "(", NamePart n, RawPart t, TextPart ")"]
+    f (n, t) = SubReport [TextPart "(", NamePart n,
+                          TextPart ":", RawPart t, TextPart ")"]
     g : List (TTName, Ty) -> ErrorReportPart
     g l = SubReport $ intersperse (TextPart ",") (map f l)
 
