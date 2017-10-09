@@ -13,6 +13,9 @@ Tm : Type
 Tm = Raw
 
 data Context = Ctx (List (TTName, Ty)) (List (TTName, Ty))
+
+Show Context where
+  show (Ctx xs ys) = "Ctx (" ++ show xs ++ ") (" ++ show ys ++ ")"
 data Sequent = Seq Context Ty
 
 concludeWithBotL : Context -> TTName -> Ty -> Tm
@@ -27,12 +30,17 @@ concludeWithTopR (Ctx g o) = `(MkUnit)
 insert : TTName -> Ty -> Context -> Context
 insert n p (Ctx g o) = case p of
   `(~(Var x) -> ~B)   => Ctx ((n, p) :: g) o
+  `(~(RType) -> ~B)   => Ctx ((n, p) :: g) o
   `((~A -> ~B) -> ~D) => Ctx ((n, p) :: g) o
   Var x               => Ctx ((n, p) :: g) o
+  RType               => Ctx ((n, p) :: g) o
   _                   => Ctx g ((n, p) :: o)
 
 appConjR : Context -> (Ty, Ty) -> (Sequent, Sequent)
 appConjR ctx (a, b) = (Seq ctx a, Seq ctx b)
+
+appTypeImplR : TTName -> Context -> (Ty, Ty) -> Sequent
+appTypeImplR n ctx (a, b) = Seq (insert n a ctx) b
 
 appImplR : Context -> (Ty, Ty) -> Elab (TTName, Sequent)
 appImplR ctx (a, b) = do n <- fresh ; pure (n, Seq (insert n a ctx) b)
@@ -56,8 +64,7 @@ except n xs = (take n xs) ++ (drop (S n) xs)
 allCtxs : List a -> List (a, List a)
 allCtxs [] = []
 allCtxs (x :: xs) = zipWith (\y,i => (y, except i (x :: xs)))
-                            (reverse (x :: xs))
-                            [(length xs) .. 0]
+                            (reverse (x :: xs)) [(length xs) .. 0]
 
 appDisjL : Context -> (Ty, Ty, Ty)
         -> Elab ((TTName, Sequent), (TTName, Sequent))
@@ -94,6 +101,10 @@ mutual
       let (newgoal1, newgoal2) = appConjR ctx (a, b) in
       let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
       pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
+    Seq ctx (RBind n (Pi RType a) b) =>
+      let newgoal = appTypeImplR n ctx (a, b) in
+      let tm = !(breakdown newgoal) in
+      pure $ RBind n (Lam a) tm
     Seq ctx `(~a -> ~b) =>
       let (n, newgoal) = !(appImplR ctx (a, b)) in
       let tm = !(breakdown newgoal) in
@@ -136,7 +147,9 @@ mutual
       -- <|> (OneInf DisjR1 <$> breakdown (Seq ctx a))
       -- <|> (OneInf DisjR2 <$> breakdown (Seq ctx b)) <*> pure goal
     Seq (Ctx g []) c => searchSync g c
-    _ => fail [TextPart "No rule applies in breakdown"]
+    Seq ctx g =>
+      fail [TextPart "No rule applies in breakdown with goal", RawPart g,
+           TextPart $ "with context " ++ show ctx]
 
   searchSync : List (TTName, Ty) -> Ty -> Elab Tm
   searchSync g c = choiceMap (eliminate c) (allCtxs g)
