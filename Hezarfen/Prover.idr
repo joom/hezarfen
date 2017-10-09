@@ -3,65 +3,52 @@ module Prover
 import Language.Reflection.Utils
 %access public export
 
-data Prop =
-  Atom Raw | Conj Prop Prop | Disj Prop Prop | Impl Prop Prop | Top | Bot
+fresh : Elab TTName
+fresh = gensym "x"
 
-Eq Prop where
-  (Atom x) == (Atom y) = x == y
-  (Conj a b) == (Conj c d) = a == c && b == d
-  (Disj a b) == (Disj c d) = a == c && b == d
-  (Impl a b) == (Impl c d) = a == c && b == d
-  Top == Top = True
-  Bot == Bot = True
-  _ == _ = False
+Ty : Type
+Ty = Raw
 
-data Context = Ctx (List Prop) (List Prop)
-data Sequent = Seq Context Prop
+Tm : Type
+Tm = Raw
 
-data Rule =
-    ConjR | ConjL | TopR | ImplR | ImplL | Init
-  | DisjL | DisjR1 | DisjR2 | TopL | BotL | AtomImplL | ConjImplL
-  | TopImplL | DisjImplL | BotImplL | ImplImplL
+data Context = Ctx (List (TTName, Ty)) (List (TTName, Ty))
+data Sequent = Seq Context Ty
 
-data Derivation =
-    ZeroInf Rule Sequent
-  | OneInf  Rule Derivation Sequent
-  | TwoInf  Rule Derivation Derivation Sequent
+concludeWithBotL : Context -> TTName -> Ty -> Tm
+concludeWithBotL (Ctx g o) n c = `(void {a=~c} ~(Var n))
 
-concludeWithBotL : Context -> Prop -> Derivation
-concludeWithBotL (Ctx g o) c = ZeroInf BotL $ Seq (Ctx (Bot :: g) o) c
+concludeWithInit : Context -> TTName -> Ty -> Tm
+concludeWithInit (Ctx g o) n c = Var n
 
-concludeWithInit : Context -> Prop -> Derivation
-concludeWithInit (Ctx g o) c = ZeroInf Init $ Seq (Ctx g o) c
+concludeWithTopR : Context -> Tm
+concludeWithTopR (Ctx g o) = `(MkUnit)
 
-concludeWithTopR : Context -> Derivation
-concludeWithTopR (Ctx g o) = ZeroInf TopR $ Seq (Ctx g o) Top
+insert : TTName -> Ty -> Context -> Context
+insert n p (Ctx g o) = case p of
+  `(~(Var x) -> ~B)   => Ctx ((n, p) :: g) o
+  `((~A -> ~B) -> ~D) => Ctx ((n, p) :: g) o
+  Var x               => Ctx ((n, p) :: g) o
+  _                   => Ctx g ((n, p) :: o)
 
-insert : Prop -> Context -> Context
-insert p (Ctx g o) = case p of
-  Atom x            => Ctx (p :: g) o
-  Impl (Atom x) b   => Ctx (p :: g) o
-  Impl (Impl a b) d => Ctx (p :: g) o
-  _                 => Ctx g (p :: o)
-
-appConjR : Context -> (Prop, Prop) -> (Sequent, Sequent)
+appConjR : Context -> (Ty, Ty) -> (Sequent, Sequent)
 appConjR ctx (a, b) = (Seq ctx a, Seq ctx b)
 
-appImplR : Context -> (Prop, Prop) -> Sequent
-appImplR ctx (a, b) = Seq (insert a ctx) b
+appImplR : Context -> (Ty, Ty) -> Elab (TTName, Sequent)
+appImplR ctx (a, b) = do n <- fresh ; pure (n, Seq (insert n a ctx) b)
 
-appConjL : Context -> (Prop, Prop, Prop) -> Sequent
-appConjL ctx (a, b, c) = Seq ((insert b . insert a) ctx) c
+appConjL : Context -> (Ty, Ty, Ty) -> Elab (TTName, TTName, Sequent)
+appConjL ctx (a, b, c) =
+  do n1 <- fresh ; n2 <- fresh
+     pure (n1, n2, Seq ((insert n1 b . insert n2 a) ctx) c)
 
-appTopL : Context -> Prop -> Sequent
-appTopL = Seq
+appTopImplL : Context -> Ty -> Ty -> Elab (TTName, Sequent)
+appTopImplL ctx b c = do n <- fresh ; pure (n, Seq (insert n b ctx) c)
 
-appTopImplL : Context -> Prop -> Prop -> Sequent
-appTopImplL ctx b c = Seq (insert b ctx) c
-
-appDisjImplL : Context -> (Prop, Prop, Prop, Prop) -> Sequent
+appDisjImplL : Context -> (Ty, Ty, Ty, Ty) -> Elab (TTName, TTName, Sequent)
 appDisjImplL ctx (d, e, b, c) =
-  Seq ((insert (Impl e b) . insert (Impl d b)) ctx) c
+  do n1 <- fresh ; n2 <- fresh
+     pure (n1, n2, Seq ((insert n2 `(~e -> ~b) . insert n1 `(~d -> ~b)) ctx) c)
 
 except : Nat -> List a -> List a
 except n xs = (take n xs) ++ (drop (S n) xs)
@@ -72,103 +59,107 @@ allCtxs (x :: xs) = zipWith (\y,i => (y, except i (x :: xs)))
                             (reverse (x :: xs))
                             [(length xs) .. 0]
 
-appDisjL : Context -> (Prop, Prop, Prop) -> (Sequent, Sequent)
+appDisjL : Context -> (Ty, Ty, Ty)
+        -> Elab ((TTName, Sequent), (TTName, Sequent))
 appDisjL ctx (a, b, c) =
-  let (ctx1, ctx2) = (insert a ctx, insert b ctx) in
-  (Seq ctx1 c, Seq ctx2 c)
+  let (n1, n2) = (!fresh, !fresh) in
+  let (ctx1, ctx2) = (insert n1 a ctx, insert n2 b ctx) in
+  pure ((n1, Seq ctx1 c), (n2, Seq ctx2 c))
 
-appConjImplL : Context -> (Prop, Prop, Prop, Prop) -> Sequent
+appConjImplL : Context -> (Ty, Ty, Ty, Ty) -> Elab (TTName, Sequent)
 appConjImplL (Ctx g o) (d, e, b, c) =
-  Seq (insert (Impl d (Impl e b)) (Ctx g o)) c
+  do n <- fresh
+     pure (n, Seq (insert n `(~d -> (~e -> ~b)) (Ctx g o)) c)
 
-appAtomImplL : List Prop -> (Prop, Prop, Prop) -> Maybe Sequent
+appAtomImplL : List (TTName, Ty) -> (Ty, Ty, Ty) -> Elab (TTName, Sequent)
 appAtomImplL g (p, b, c) =
-  if p `elem` g then Just $ Seq (insert b (Ctx g [])) c else Nothing
+  do n <- fresh
+     if p `elem` (map snd g) -- TODO ?
+        then pure (n, Seq (insert n b (Ctx g [])) c)
+        else fail [TextPart "Not in context in appAtomImplL"]
 
-appImplImplL : Context -> (Prop, Prop, Prop, Prop) -> (Sequent, Sequent)
+appImplImplL : Context -> (Ty, Ty, Ty, Ty)
+            -> Elab ((TTName, TTName, Sequent), (TTName, Sequent))
 appImplImplL (Ctx g o) (d, e, b, c) =
-  let ctx1 = (insert d . insert (Impl e b)) (Ctx g o) in
-  let ctx2 = insert b (Ctx g o) in
-  (Seq ctx1 e, Seq ctx2 c)
+  let (n1, n2, n3) = (!fresh, !fresh, !fresh) in
+  let ctx1 = (insert n1 d . insert n2 `(~e -> ~b)) (Ctx g o) in
+  let ctx2 = insert n3 b (Ctx g o) in
+  pure ((n1, n2, Seq ctx1 e), (n3, Seq ctx2 c))
 
 mutual
-  breakdown : Sequent -> Maybe Derivation
-  breakdown (Seq (Ctx g o) p) =
-    let ctx = Ctx g o in
-    let goal = Seq (Ctx g o) p in
-    case goal of
-      Seq ctx Top => pure $ concludeWithTopR ctx
-      Seq ctx (Conj a b) =>
-        let (newgoal1, newgoal2) = appConjR ctx (a, b) in
-        pure $ TwoInf ConjR !(breakdown newgoal1) !(breakdown newgoal2) goal
-      Seq _ (Impl a b) =>
-        let newgoal = appImplR ctx (a, b) in
-        pure $ OneInf ImplR !(breakdown newgoal) goal
-      Seq (Ctx g ((Conj a b) :: o)) c =>
-        let newgoal = appConjL (Ctx g o) (a, b, c) in
-        pure $ OneInf ConjL !(breakdown newgoal) goal
-      Seq (Ctx g (Top :: o)) c =>
-        let newgoal = appTopL (Ctx g o) c in
-        pure $ OneInf TopL !(breakdown newgoal) goal
-      Seq (Ctx g (Bot :: o)) c => pure $ concludeWithBotL (Ctx g o) c
-      Seq (Ctx g ((Disj a b) :: o)) c =>
-        let (newgoal1, newgoal2) = appDisjL (Ctx g o) (a, b, c) in
-        pure $ TwoInf DisjL !(breakdown newgoal1) !(breakdown newgoal2) goal
-      Seq (Ctx g ((Impl Top b) :: o)) c =>
-        let newgoal = appTopImplL (Ctx g o) b c in
-        pure $ OneInf TopImplL !(breakdown newgoal) goal
-      Seq (Ctx g ((Impl Bot b) :: o)) c =>
-        let newgoal = Seq (Ctx g o) c in
-        pure $ OneInf TopImplL !(breakdown newgoal) goal
-      Seq (Ctx g ((Impl (Conj d e) b) :: o)) c =>
-        let newgoal = appConjImplL (Ctx g o) (d, e, b, c) in
-        pure $ OneInf TopImplL !(breakdown newgoal) goal
-      Seq (Ctx g ((Impl (Disj d e) b) :: o)) c =>
-        let newgoal = appDisjImplL (Ctx g o) (d, e, b, c) in
-        pure $ OneInf DisjImplL !(breakdown newgoal) goal
-      Seq (Ctx g []) (Disj a b) =>
-            (OneInf DisjL  <$> searchSync g p)
-        <|> (OneInf DisjR1 <$> breakdown (Seq ctx a))
-        <|> (OneInf DisjR2 <$> breakdown (Seq ctx b)) <*> pure goal
-      Seq (Ctx g []) c => searchSync g c
-      _ => empty
+  breakdown : Sequent -> Elab Tm
+  breakdown goal = case goal of
+    Seq ctx `(Unit) => pure $ concludeWithTopR ctx
+    Seq ctx `(Pair ~a ~b) =>
+      let (newgoal1, newgoal2) = appConjR ctx (a, b) in
+      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
+    Seq ctx `(~a -> ~b) =>
+      let (n, newgoal) = !(appImplR ctx (a, b)) in
+      let tm = !(breakdown newgoal) in
+      pure $ RBind n (Lam a) tm
+    Seq (Ctx g ((p, `(Pair ~a ~b)) :: o)) c =>
+      let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
+      pure $ RBind n1 (Let a `(fst {a=~a} {b=~b} ~(Var p)))
+           $ RBind n2 (Let b `(snd {a=~a} {b=~b} ~(Var p)))
+             !(breakdown newgoal)
+    Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown (Seq (Ctx g o) c)
+    Seq (Ctx g ((n, `(Void)) :: o)) c =>
+      pure $ concludeWithBotL (Ctx g o) n c
+    Seq (Ctx g ((n, `(Either ~a ~b)) :: o)) c =>
+      let ((n1, newgoal1), (n2, newgoal2)) = !(appDisjL (Ctx g o) (a, b, c)) in
+      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      let lm1 = RBind n1 (Lam a) tm1 in
+      let lm2 = RBind n2 (Lam b) tm2 in
+      pure `(either {c=~c} {b=~b} {a=~a} (Delay ~lm1) (Delay ~lm2) ~(Var n))
+    Seq (Ctx g ((n, `(Unit -> ~b)) :: o)) c =>
+      let (n', newgoal) = !(appTopImplL (Ctx g o) b c) in
+      pure $ RBind n' (Let b (RApp (Var n) `(MkUnit))) !(breakdown newgoal)
+    Seq (Ctx g ((n, `(Void -> ~b)) :: o)) c => breakdown (Seq (Ctx g o) c)
+    Seq (Ctx g ((n, `((Pair ~d ~e) -> ~b)) :: o)) c =>
+      let (n', newgoal) = !(appConjImplL (Ctx g o) (d, e, b, c)) in
+      pure $ RBind n' (Let `(~d -> ~e -> ~b)
+                            `(curry {c=~b} {b=~e} {a=~d} ~(Var n)))
+                      !(breakdown newgoal)
+    Seq (Ctx g ((n, `((Either ~d ~e) -> ~b)) :: o)) c =>
+      let (n1, n2, newgoal) = !(appDisjImplL (Ctx g o) (d, e, b, c)) in
+      let (l1, l2) = (!fresh, !fresh) in
+      pure $ RBind n1 (Let `(~d -> ~b)
+                        (RBind l1 (Lam d) (RApp (Var n)
+                          `(Left {a=~d} {b=~e} ~(Var l1)))))
+           $ RBind n2 (Let `(~e -> ~b)
+                        (RBind l2 (Lam e) (RApp (Var n)
+                          `(Right {a=~d} {b=~e} ~(Var l2)))))
+             !(breakdown newgoal)
+    Seq (Ctx g []) `(Either ~a ~b) => ?e
+          -- (OneInf DisjL  <$> searchSync g p)
+      -- <|> (OneInf DisjR1 <$> breakdown (Seq ctx a))
+      -- <|> (OneInf DisjR2 <$> breakdown (Seq ctx b)) <*> pure goal
+    Seq (Ctx g []) c => searchSync g c
+    _ => fail [TextPart "No rule applies in breakdown"]
 
-  searchSync : List Prop -> Prop -> Maybe Derivation
+  searchSync : List (TTName, Ty) -> Ty -> Elab Tm
   searchSync g c = choiceMap (eliminate c) (allCtxs g)
 
-  eliminate : Prop -> (Prop, List Prop) -> Maybe Derivation
-  eliminate (Atom y) (Atom x, ctx) =
+  eliminate : Ty -> ((TTName, Ty), List (TTName, Ty)) -> Elab Ty
+  eliminate (Var y) ((n2, Var x), ctx) =
     if x == y
-    then pure $ concludeWithInit (Ctx (Atom x :: ctx) []) (Atom y)
-    else empty
-  eliminate _ (Atom x, _) = empty
-  eliminate c (Impl (Atom x) b, ctx) =
-    let goal = Seq (Ctx ((Impl (Atom x) b) :: ctx) []) c in
-    pure $ OneInf AtomImplL !(breakdown !(appAtomImplL ctx (Atom x, b, c))) goal
-  eliminate c (Impl (Impl d e) b, ctx) =
-    let goal = Seq (Ctx ((Impl (Impl d e) b) :: ctx) []) c in
-    let (newgoal1, newgoal2) = appImplImplL (Ctx ctx []) (d, e, b, c) in
-    pure $ TwoInf ImplImplL !(breakdown newgoal1) !(breakdown newgoal2) goal
-  eliminate _ _ = Nothing
+    then pure $ concludeWithInit (Ctx ((n2, Var x) :: ctx) []) n2 (Var y)
+    else fail [TextPart "Var comparison failed in eliminate"]
+  eliminate _ ((_, Var _), _) =
+    fail [TextPart "Eliminate argument not a var"]
+  eliminate c ((n, `(~(Var x) -> ~b)), ctx) =
+    let goal = Seq (Ctx ((n, `(~(Var x) -> ~b)) :: ctx) []) c in
+    let (n', newgoal) = !(appAtomImplL ctx (Var x, b, c)) in
+    pure $ ?l
+    -- pure $ OneInf AtomImplL !(breakdown newgoal) goal
+  eliminate c ((n, `((~d -> ~e) -> ~b)), ctx) =
+    let goal = Seq (Ctx ((n, `((~d -> ~e) -> ~b)) :: ctx) []) c in
+    let ((a1, a2, newgoal1), (a3, newgoal2)) =
+      !(appImplImplL (Ctx ctx []) (d, e, b, c)) in
+   pure $ ?l2
+    -- pure $ TwoInf ImplImplL !(breakdown newgoal1) !(breakdown newgoal2) goal
+  eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
-prove : Prop -> Maybe Derivation
+prove : Ty -> Elab Tm
 prove c = breakdown (Seq (Ctx [] []) c)
-
--- Converting proofs to Idris terms
-
-expFromDeriv : Derivation -> Raw
-expFromDeriv (ZeroInf r s) = ?c
-expFromDeriv (OneInf r d s) = ?c2
-expFromDeriv (TwoInf r d1 d2 s) = ?c3
-
-propFromType : Raw -> Prop
-propFromType r = case r of
-  `(~A -> ~B)     => Impl (propFromType A) (propFromType B)
-  `(Pair ~A ~B)   => Conj (propFromType A) (propFromType B)
-  `(Either ~A ~B) => Disj (propFromType A) (propFromType B)
-  `(Unit)         => Top
-  `(Void)         => Bot
-  _               => Atom r
-
-getExpr : (ty : Raw) -> Maybe Raw
-getExpr ty = expFromDeriv <$> prove (propFromType ty)
