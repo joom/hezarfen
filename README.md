@@ -1,7 +1,5 @@
 # Hezarfen
 
-(work in progress)
-
 An Idris implementation of a theorem prover for [Roy Dyckhoff's
 LJT](https://rd.host.cs.st-andrews.ac.uk/publications/jsl57.pdf), a sequent
 calculus for propositional intuitionistic logic that is decidable and does
@@ -28,6 +26,8 @@ f5 = %runElab hezarfen
 demorgan1 : Not (Either p q) -> (Not p, Not q)
 demorgan1 = %runElab hezarfen
 ```
+
+For more examples, look at [Examples.idr](https://github.com/joom/hezarfen/blob/master/Examples.idr).
 
 ***
 

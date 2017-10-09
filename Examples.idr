@@ -19,6 +19,9 @@ f4 = %runElab hezarfen
 f5 : (p -> q, p -> r) -> p -> (q, r)
 f5 = %runElab hezarfen
 
+f6 : (((a -> b) -> c) -> d) -> ((a -> b) -> c) -> (a -> b) -> d
+f6 = %runElab hezarfen
+
 demorgan1 : Not (Either p q) -> (Not p, Not q)
 demorgan1 = %runElab hezarfen
 

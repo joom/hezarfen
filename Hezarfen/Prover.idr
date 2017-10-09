@@ -17,10 +17,11 @@ data Context = Ctx (List (TTName, Ty)) (List (TTName, Ty))
 ctxPart : Context -> ErrorReportPart
 ctxPart (Ctx xs ys) =
     SubReport $ [TextPart "(", g xs, TextPart "===>",  g ys, TextPart ")"]
-  where f : (TTName, Ty) -> ErrorReportPart
-        f (n, t) = SubReport [TextPart "(", NamePart n, RawPart t, TextPart ")"]
-        g : List (TTName, Ty) -> ErrorReportPart
-        g l = SubReport $ intersperse (TextPart ",") (map f l)
+  where
+    f : (TTName, Ty) -> ErrorReportPart
+    f (n, t) = SubReport [TextPart "(", NamePart n, RawPart t, TextPart ")"]
+    g : List (TTName, Ty) -> ErrorReportPart
+    g l = SubReport $ intersperse (TextPart ",") (map f l)
 
 data Sequent = Seq Context Ty
 
@@ -99,10 +100,11 @@ appImplImplL (Ctx g o) (d, e, b, c) =
 
 hErr : String -> Sequent -> Elab a
 hErr s (Seq ctx g) =
-      fail [TextPart ("No rule applies in " ++ s ++ " with goal")
-           , RawPart g
-           , TextPart "with context "
-           , ctxPart ctx]
+  fail [ TextPart ("No rule applies in " ++ s ++ " with goal")
+       , RawPart g
+       , TextPart "with context "
+       , ctxPart ctx]
+
 mutual
   breakdown : Sequent -> Elab Tm
   breakdown goal = case goal of
@@ -152,7 +154,7 @@ mutual
          (searchSync g `(Either ~a ~b))
      <|> (do t <- breakdown (Seq (Ctx g []) a); pure `(Left {a=~a} {b=~b} ~t))
      <|> (do t <- breakdown (Seq (Ctx g []) b); pure `(Right {a=~a} {b=~b} ~t))
-     <|> hErr "breakdown either" goal
+     <|> hErr "breakdown either case" goal
     Seq (Ctx g []) c => searchSync g c
     _ => hErr "breakdown" goal
 
@@ -167,19 +169,18 @@ mutual
     else fail [TextPart "Var comparison failed in eliminate"]
   eliminate _ ((_, Var _), _) = fail [TextPart "Eliminate argument not a var"]
   eliminate c ((n, `(~(Var x) -> ~b)), ctx) =
-    let goal = Seq (Ctx ((n, `(~(Var x) -> ~b)) :: ctx) []) c in
     let (n', newgoal, m) = !(appAtomImplL ctx (Var x, b, c)) in
     let tm = !(breakdown newgoal) in
     pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
   eliminate c ((n, `((~d -> ~e) -> ~b)), ctx) =
-    let goal = Seq (Ctx ((n, `((~d -> ~e) -> ~b)) :: ctx) []) c in
     let ((a1, a2, newgoal1), (a3, newgoal2)) =
       !(appImplImplL (Ctx ctx []) (d, e, b, c)) in
     let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
-    -- let appImp p q = RApp p (RApp q ?a)
-    pure $ ?t
-
-    -- pure $ TwoInf ImplImplL !(breakdown newgoal1) !(breakdown newgoal2) goal
+    let n' = !fresh in
+    let q = RBind a2 (Lam `(~e -> ~b)) (RBind a1 (Lam d) tm1) in
+    pure $ RApp (RBind a3 (Lam b) tm2) $
+             RApp (Var n) $ RApp q $ RBind n' (Lam e)
+               (RApp (Var n) (RBind !fresh (Lam d) (Var n')))
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
 prove : Ty -> Elab Tm
