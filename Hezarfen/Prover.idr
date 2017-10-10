@@ -35,14 +35,20 @@ concludeWithInit (Ctx g o) n c = Var n
 concludeWithTopR : Context -> Tm
 concludeWithTopR (Ctx g o) = `(MkUnit)
 
+isAtom : Ty -> Bool
+isAtom (Var _) = True
+isAtom `(Either ~_ ~_) = False
+isAtom `(Pair ~_ ~_) = False
+isAtom `(~_ -> ~_) = False
+isAtom `(Unit) = False
+isAtom `(Void) = False
+isAtom _ = True
+
 insert : TTName -> Ty -> Context -> Context
 insert n p (Ctx g o) = case p of
-  `(~(Var x) -> ~B)   => Ctx ((n, p) :: g) o
-  `(~(RType) -> ~B)   => Ctx ((n, p) :: g) o
   `((~A -> ~B) -> ~D) => Ctx ((n, p) :: g) o
-  Var x               => Ctx ((n, p) :: g) o
-  RType               => Ctx ((n, p) :: g) o
-  _                   => Ctx g ((n, p) :: o)
+  `(~A -> ~B) => if isAtom A then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
+  _           => if isAtom p then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
 
 appConjR : Context -> (Ty, Ty) -> (Sequent, Sequent)
 appConjR ctx (a, b) = (Seq ctx a, Seq ctx b)
@@ -52,16 +58,16 @@ appImplR n ctx (a, b) = Seq (insert n a ctx) b
 
 appConjL : Context -> (Ty, Ty, Ty) -> Elab (TTName, TTName, Sequent)
 appConjL ctx (a, b, c) =
-  do n1 <- fresh ; n2 <- fresh
-     pure (n1, n2, Seq ((insert n2 b . insert n1 a) ctx) c)
+  let (n1, n2) = (!fresh, !fresh) in
+  pure (n1, n2, Seq ((insert n2 b . insert n1 a) ctx) c)
 
 appTopImplL : Context -> Ty -> Ty -> Elab (TTName, Sequent)
 appTopImplL ctx b c = do n <- fresh ; pure (n, Seq (insert n b ctx) c)
 
 appDisjImplL : Context -> (Ty, Ty, Ty, Ty) -> Elab (TTName, TTName, Sequent)
 appDisjImplL ctx (d, e, b, c) =
-  do n1 <- fresh ; n2 <- fresh
-     pure (n1, n2, Seq ((insert n2 `(~e -> ~b) . insert n1 `(~d -> ~b)) ctx) c)
+  let (n1, n2) = (!fresh, !fresh) in
+  pure (n1, n2, Seq ((insert n2 `(~e -> ~b) . insert n1 `(~d -> ~b)) ctx) c)
 
 except : Nat -> List a -> List a
 except n xs = (take n xs) ++ (drop (S n) xs)
@@ -164,15 +170,6 @@ mutual
                <|> hErr "searchSync" (Seq (Ctx g []) c)
 
   eliminate : Ty -> ((TTName, Ty), List (TTName, Ty)) -> Elab Ty
-  eliminate (Var y) ((n2, Var x), ctx) =
-    if x == y
-    then pure $ concludeWithInit (Ctx ((n2, Var x) :: ctx) []) n2 (Var y)
-    else fail [TextPart "Var comparison failed in eliminate"]
-  eliminate _ ((_, Var _), _) = fail [TextPart "Eliminate argument not a var"]
-  eliminate c ((n, `(~(Var x) -> ~b)), ctx) =
-    let (n', newgoal, m) = !(appAtomImplL ctx (Var x, b, c)) in
-    let tm = !(breakdown newgoal) in
-    pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
   eliminate c ((n, `((~d -> ~e) -> ~b)), ctx) =
     let ((a1, a2, newgoal1), (a3, newgoal2)) =
       !(appImplImplL (Ctx ctx []) (d, e, b, c)) in
@@ -182,6 +179,17 @@ mutual
     pure $ RApp (RBind a3 (Lam b) tm2) $
              RApp (Var n) $ RApp q $ RBind n' (Lam e)
                (RApp (Var n) (RBind !fresh (Lam d) (Var n')))
+  eliminate c ((n, `(~x -> ~b)), ctx) =
+    if not (isAtom x)
+    then fail [RawPart x, TextPart "is not an atom"]
+    else let (n', newgoal, m) = !(appAtomImplL ctx (x, b, c)) in
+         let tm = !(breakdown newgoal) in
+         pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
+  eliminate y ((n2, x), ctx) =
+    if x == y && isAtom y && isAtom x
+    then pure $ concludeWithInit (Ctx ((n2, x) :: ctx) []) n2 (y)
+    else fail [TextPart "Var comparison failed in eliminate"]
+  eliminate _ ((_, x), _) = fail [TextPart "Eliminate argument not a var"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
 prove : Ty -> Elab Tm

@@ -41,8 +41,27 @@ noContradiction = %runElab hezarfen
 
 -- Examples with default values for some types
 
-n : Nat
-n = %runElab (add [`{Z}] >>= hezarfen')
+nat : Nat
+nat = %runElab (add [`{Z}] >>= hezarfen')
 
-b : (Bool, a -> a)
-b = %runElab (add [`{True}] >>= hezarfen')
+bool : (Bool, a -> a)
+bool = %runElab (add [`{True}] >>= hezarfen')
+
+-- Using a lemma
+data Even : Nat -> Type where
+  EvenZ : Even Z
+  EvenSS : Even n -> Even (S (S n))
+
+data Odd : Nat -> Type where
+  Odd1 : Odd 1
+  OddSS : Odd n -> Odd (S (S n))
+
+evenOrOdd : (n : Nat) -> Either (Even n) (Odd n)
+evenOrOdd Z = Left EvenZ
+evenOrOdd (S Z) = Right Odd1
+evenOrOdd (S (S n)) = case evenOrOdd n of
+                           Left ev => Left $ EvenSS ev
+                           Right o => Right $ OddSS o
+
+oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
+oddOrEven = %runElab (add [`{evenOrOdd}] >>= hezarfen')
