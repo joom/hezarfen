@@ -45,4 +45,5 @@ Some support for deriving terms with type classes can be implemented, à la Djin
 
 ***
 
-*hezarfen* (/hezaɾfæn/) is a Turkish word that means polymath, literally "a thousand sciences".
+*hezarfen* (/hezaɾfæn/, sounds like "has are fan") is a Turkish word that means
+polymath, literally "a thousand sciences".
