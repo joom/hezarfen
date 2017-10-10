@@ -36,7 +36,6 @@ concludeWithTopR : Context -> Tm
 concludeWithTopR (Ctx g o) = `(MkUnit)
 
 isAtom : Ty -> Bool
-isAtom (Var _) = True
 isAtom `(Either ~_ ~_) = False
 isAtom `(Pair ~_ ~_) = False
 isAtom `(~_ -> ~_) = False
@@ -188,8 +187,8 @@ mutual
   eliminate y ((n2, x), ctx) =
     if x == y && isAtom y && isAtom x
     then pure $ concludeWithInit (Ctx ((n2, x) :: ctx) []) n2 (y)
-    else fail [TextPart "Var comparison failed in eliminate"]
-  eliminate _ ((_, x), _) = fail [TextPart "Eliminate argument not a var"]
+    else fail [TextPart "Atom comparison failed in eliminate"]
+  eliminate _ ((_, x), _) = fail [TextPart "Eliminate argument not an atom"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
 prove : Ty -> Elab Tm

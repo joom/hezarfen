@@ -33,12 +33,11 @@ It can also make use of your existing lemmas:
 evenOrOdd : (n : Nat) -> Either (Even n) (Odd n)
 ... -- some definition of an existing lemma
 
-
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
 oddOrEven = %runElab (add [`{evenOrOdd}] >>= hezarfen')
 ```
 
-For more examples, look at [Examples.idr](https://github.com/joom/hezarfen/blob/master/Examples.idr).
+For details, look at [Examples.idr](https://github.com/joom/hezarfen/blob/master/Examples.idr).
 
 ## Future Work
 
@@ -46,4 +45,4 @@ Some support for deriving terms with type classes can be implemented, à la Djin
 
 ***
 
-*hezarfen* is a Turkish word that means polymath, literally "a thousand sciences".
+*hezarfen* (/hezaɾfæn/) is a Turkish word that means polymath, literally "a thousand sciences".
