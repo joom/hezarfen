@@ -35,6 +35,10 @@ evenOrOdd : (n : Nat) -> Either (Even n) (Odd n)
 
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
 oddOrEven = %runElab (add [`{evenOrOdd}] >>= hezarfen')
+
+-- something more complex, but passing the constructors for Even and Odd
+evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
+evenOrOddSS = %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen')
 ```
 
 For details, look at [Examples.idr](https://github.com/joom/hezarfen/blob/master/Examples.idr).
