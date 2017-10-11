@@ -3,8 +3,27 @@ module Prover
 import Language.Reflection.Utils
 %access public export
 
+||| A hacky way to convert any integer to a string.
+||| It initially tries to get a single character string,
+||| but if the number is too high then it adds some number afterwards.
+||| Does not generate good variable names for negative numbers.
+intToStr : Int -> String
+intToStr i = let d = i `div` 25 in
+             pack [chr (97 + (i `mod` 25))] ++
+             (if d == 0 then "" else show d)
+
+||| A hacky way to generate fresh variable names that are readable.
+||| It assumes that the `gensym` function will return a `MN` that holds
+||| an integer at least 101, which is currently the case, but
+||| this function needs to rewritten if that changes in the future.
 fresh : Elab TTName
-fresh = gensym "x"
+fresh =
+  do MN i "x" <- gensym "x"
+        | _ => fail [TextPart "Bug in gensym"]
+     let n = UN $ intToStr (i - 101)
+     case !(lookupTy n) of
+       [] => pure n
+       _ => fresh -- we will eventually get a fresh name
 
 Ty : Type
 Ty = Raw
