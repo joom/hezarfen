@@ -3,3 +3,4 @@ package hezarfen
 modules = Hezarfen
         , Hezarfen.Prover
         , Hezarfen.Simplify
+        , Hezarfen.FunDefn
