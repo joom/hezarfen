@@ -20,6 +20,7 @@ fresh : Elab TTName
 fresh =
   do MN i "x" <- gensym "x"
         | _ => fail [TextPart "Bug in ", NamePart `{gensym}]
+     when (i < 101) (fail [TextPart "Bug in", NamePart `{fresh}])
      let n = UN $ intToStr (i - 101)
      case !(lookupTy n) of
        [] => pure n

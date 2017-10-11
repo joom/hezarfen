@@ -1,6 +1,7 @@
 module Hezarfen
 
 import Hezarfen.Prover
+import Hezarfen.Simplify
 import Language.Reflection.Utils
 
 %access public export
@@ -28,7 +29,7 @@ add xs = (flip Ctx) [] <$> traverse getTy xs
 hezarfen' : Context -> Elab ()
 hezarfen' c = case !(forget . snd <$> getGoal) of
   Nothing => fail [TextPart "Couldn't get the goal"]
-  Just ty => fill !(breakdown $ Seq (c ++ !getCtx) ty) *> solve
+  Just ty => fill (reduceLoop !(breakdown $ Seq (c ++ !getCtx) ty)) *> solve
 
 hezarfen : Elab ()
 hezarfen = hezarfen' (Ctx [] [])
