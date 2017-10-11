@@ -39,6 +39,9 @@ demorgan3 = %runElab hezarfen
 noContradiction : Not (p , Not p)
 noContradiction = %runElab hezarfen
 
+contrapositive : (p -> q) -> (Not q -> Not p)
+contrapositive = %runElab hezarfen
+
 -- Examples with default values for some types
 
 nat : Nat
@@ -65,3 +68,6 @@ evenOrOdd (S (S n)) = case evenOrOdd n of
 
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
 oddOrEven = %runElab (add [`{evenOrOdd}] >>= hezarfen')
+
+evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
+evenOrOddSS = %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen')
