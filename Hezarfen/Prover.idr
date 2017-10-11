@@ -188,7 +188,6 @@ mutual
     if x == y && isAtom y && isAtom x
     then pure $ concludeWithInit (Ctx ((n2, x) :: ctx) []) n2 (y)
     else fail [TextPart "Atom comparison failed in eliminate"]
-  eliminate _ ((_, x), _) = fail [TextPart "Eliminate argument not an atom"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
 prove : Ty -> Elab Tm
