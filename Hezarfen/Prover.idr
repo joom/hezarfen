@@ -19,7 +19,7 @@ intToStr i = let d = i `div` 25 in
 fresh : Elab TTName
 fresh =
   do MN i "x" <- gensym "x"
-        | _ => fail [TextPart "Bug in gensym"]
+        | _ => fail [TextPart "Bug in ", NamePart `{gensym}]
      let n = UN $ intToStr (i - 101)
      case !(lookupTy n) of
        [] => pure n
@@ -138,7 +138,17 @@ mutual
       let (newgoal1, newgoal2) = appConjR ctx (a, b) in
       let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
       pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
-    Seq ctx (RBind n (Pi a _) b) =>
+    Seq ctx (RBind orig (Pi a _) b) =>
+      let newn = !fresh in
+      -- If the Pi type has __pi_arg in the beginning, that means it wasn't
+      -- explicitly named, hence not used later in the type.
+      -- Therefore it is safe it give it a fresh, readable name
+      -- Explicitly named Pi arguments can be used in predicates,
+      -- which we only handle as atoms, so it's better to keep those names
+      -- as they are provided
+      let n = case orig of
+                   UN s => if isPrefixOf "__pi_arg" s then newn else orig
+                   _ => newn in
       let newgoal = appImplR n ctx (a, b) in
       let tm = !(breakdown newgoal) in
       pure $ RBind n (Lam a) tm
