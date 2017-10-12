@@ -5,50 +5,55 @@ import Hezarfen.Prover
 
 %language ElabReflection
 
+-- You can generate proofs as expressions, but it's better to
+-- generate definitions instead since they are more readable.
+
 f1 : (a -> b) -> (b -> c) -> a -> c
-f1 = %runElab hezarfen
+f1 = %runElab hezarfenExpr
+
+-- `f1` is generated as an expression, the rest will be definitions.
 
 f2 : (a -> b) -> (b -> c) -> (c -> d) -> a -> d
-f2 = %runElab hezarfen
+%runElab (hezarfen `{f2})
 
 f3 : Either a (Either b c) -> Either (Either a b) c
-f3 = %runElab hezarfen
+%runElab (hezarfen `{f3})
 
 f4 : (a, b, c) -> (c, b, a)
-f4 = %runElab hezarfen
+%runElab (hezarfen `{f4})
 
 f5 : (p -> q, p -> r) -> p -> (q, r)
-f5 = %runElab hezarfen
+%runElab (hezarfen `{f5})
 
 f6 : (((a -> b) -> c) -> d) -> ((a -> b) -> c) -> (a -> b) -> d
-f6 = %runElab hezarfen
+%runElab (hezarfen `{f6})
 
 demorgan1 : Not (Either p q) -> (Not p, Not q)
-demorgan1 = %runElab hezarfen
+%runElab (hezarfen `{demorgan1})
 
 demorgan2 : (Not p, Not q) -> Not (Either p q)
-demorgan2 = %runElab hezarfen
+%runElab (hezarfen `{demorgan2})
 
 demorgan3 : Either (Not p) (Not q) -> Not (p, q)
-demorgan3 = %runElab hezarfen
+%runElab (hezarfen `{demorgan3})
 
 -- This one is classical so it cannot be proved by Hezarfen
 -- demorgan4 : Not (p, q) -> Either (Not p) (Not q)
 -- demorgan4 = %runElab hezarfen
 
 noContradiction : Not (p , Not p)
-noContradiction = %runElab hezarfen
+%runElab (hezarfen `{noContradiction})
 
 contrapositive : (p -> q) -> (Not q -> Not p)
-contrapositive = %runElab hezarfen
+%runElab (hezarfen `{contrapositive})
 
 -- Examples with default values for some types
 
 nat : Nat
-nat = %runElab (add [`{Z}] >>= hezarfen')
+%runElab (add [`{Z}] >>= hezarfen' `{nat})
 
 bool : (Bool, a -> a)
-bool = %runElab (add [`{True}] >>= hezarfen')
+%runElab (add [`{True}] >>= hezarfen' `{bool})
 
 -- Using a lemma
 data Even : Nat -> Type where
@@ -67,19 +72,7 @@ evenOrOdd (S (S n)) = case evenOrOdd n of
                            Right o => Right $ OddSS o
 
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
-oddOrEven = %runElab (add [`{evenOrOdd}] >>= hezarfen')
+%runElab (add [`{evenOrOdd}] >>= hezarfen' `{oddOrEven})
 
 evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
-evenOrOddSS = %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen')
-
--- Definitions
-
-kCombinator : a -> (b -> a)
-%runElab (hezarfenDecl `{kCombinator})
-
-contrapositive' : (p -> q) -> Not q -> Not p
-%runElab (hezarfenDecl `{contrapositive'})
-
-oddOrEven' : (n : Nat) -> Either (Odd n) (Even n)
-%runElab (add [`{evenOrOdd}] >>= hezarfenDecl' `{oddOrEven'})
-
+%runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen' `{evenOrOddSS})

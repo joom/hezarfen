@@ -30,19 +30,19 @@ getTy n = case !(lookupTyExact n) of
 add : List TTName -> Elab Context
 add xs = (flip Ctx) [] <$> traverse getTy xs
 
-hezarfen' : Context -> Elab ()
-hezarfen' c =
+hezarfenExpr' : Context -> Elab ()
+hezarfenExpr' c =
   do goal <- forget' (snd !getGoal)
      fill $ reduceLoop !(breakdown $ Seq (c ++ !getCtx) goal)
      solve
 
-hezarfen : Elab ()
-hezarfen = hezarfen' (Ctx [] [])
+hezarfenExpr : Elab ()
+hezarfenExpr = hezarfenExpr' (Ctx [] [])
 
 -- Generate declarations
 
-hezarfenDecl' : TTName -> Context -> Elab ()
-hezarfenDecl' n c = case !(lookupTy n) of
+hezarfen' : TTName -> Context -> Elab ()
+hezarfen' n c = case !(lookupTy n) of
   [] => fail [TextPart "No type found for", NamePart n]
   [(_, _, tt)] =>
     do tt' <- normalise !getEnv tt
@@ -61,5 +61,5 @@ hezarfenDecl' n c = case !(lookupTy n) of
 ||| f : a -> a
 ||| %runElab (hezarfenDecl `{f})
 ||| ```
-hezarfenDecl : TTName -> Elab ()
-hezarfenDecl n = hezarfenDecl' n (Ctx [] [])
+hezarfen : TTName -> Elab ()
+hezarfen n = hezarfen' n (Ctx [] [])

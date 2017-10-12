@@ -5,6 +5,13 @@ import Language.Reflection.Utils
 
 %access public export
 
+||| Looking at a proof term, collect the initial lambda argument names and
+||| their types, and return the remaining proof term after the initial lambdas.
+collect : Tm -> (List (TTName, Tm), Tm)
+collect (RBind n' (Lam b) t') with (collect t')
+  | (xs, rest) = ((n', b) :: xs, rest)
+collect t' = ([], t')
+
 ||| Returns a left and right hand side for a fun clause
 lambdas : TTName -> Tm -> Elab (Tm, Tm)
 lambdas n t =
@@ -13,11 +20,6 @@ lambdas n t =
     let xsRev = reverse xs in
     pure (binds xsRev apps, binds xsRev rhs)
   where
-    collect : Ty -> (List (TTName, Ty), Ty)
-    collect (RBind n' (Lam b) t') with (collect t')
-      | (xs, rest) = ((n', b) :: xs, rest)
-    collect t' = ([], t')
-
     ||| The list should be reversed beforehand
     binds : List (TTName, Ty) -> Tm -> Raw
     binds [] t' = t'

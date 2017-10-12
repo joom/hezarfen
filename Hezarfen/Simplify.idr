@@ -44,6 +44,14 @@ reduce t = case t of
   -- (id x) becomes x
   RApp (RApp (Var `{id}) c) x => reduce x
 
+  -- (id . f) becomes f
+  RApp (RApp (RApp (RApp (RApp (Var `{(.)}) c) a) b) (Var `{id})) f => reduce f
+  RApp (RApp (RApp (RApp (RApp (Var `{(.)}) c) a) b) (RApp (Var `{id}) _)) f => reduce f
+
+  -- (f . id) becomes f
+  RApp (RApp (RApp (RApp (RApp (Var `{(.)}) c) a) b) f) (Var `{id}) => reduce f
+  RApp (RApp (RApp (RApp (RApp (Var `{(.)}) c) a) b) f) (RApp (Var `{id}) _) => reduce f
+
   -- (\x => x) becomes id
   RBind n (Lam b) (Var n') =>
     if n == n'
