@@ -134,18 +134,8 @@ hErr s (Seq ctx g) =
 mutual
   breakdown : Sequent -> Elab Tm
   breakdown goal = case goal of
-    Seq ctx `(Unit) => pure $ concludeWithTopR ctx
-    Seq (Ctx g ((n, `(Void)) :: o)) c =>
-      pure $ concludeWithBotL (Ctx g o) n c
-    Seq (Ctx g ((p, `(Pair ~a ~b)) :: o)) c =>
-      let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
-      pure $ RBind n1 (Let a `(fst {a=~a} {b=~b} ~(Var p)))
-           $ RBind n2 (Let b `(snd {a=~a} {b=~b} ~(Var p)))
-             !(breakdown newgoal)
-    Seq ctx `(Pair ~a ~b) =>
-      let (newgoal1, newgoal2) = appConjR ctx (a, b) in
-      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
-      pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
+    -- Introduce as many lambdas as soon as possible
+    -- This way it's easier to collapse them into function definitions.
     Seq ctx (RBind orig (Pi a _) b) =>
       let newn = !fresh in
       -- If the Pi type has __pi_arg in the beginning, that means it wasn't
@@ -160,6 +150,21 @@ mutual
       let newgoal = appImplR n ctx (a, b) in
       let tm = !(breakdown newgoal) in
       pure $ RBind n (Lam a) tm
+    Seq ctx `(Unit) => pure $ concludeWithTopR ctx
+    Seq (Ctx g ((n, `(Void)) :: o)) c =>
+      pure $ concludeWithBotL (Ctx g o) n c
+    -- Unpack the pairs as soon as possible, so that they happen before
+    -- the `either`s, which allows us to incorporate them into patterns
+    -- in definitions easily.
+    Seq (Ctx g ((p, `(Pair ~a ~b)) :: o)) c =>
+      let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
+      pure $ RBind n1 (Let a `(fst {a=~a} {b=~b} ~(Var p)))
+           $ RBind n2 (Let b `(snd {a=~a} {b=~b} ~(Var p)))
+             !(breakdown newgoal)
+    Seq ctx `(Pair ~a ~b) =>
+      let (newgoal1, newgoal2) = appConjR ctx (a, b) in
+      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
     Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown (Seq (Ctx g o) c)
     Seq (Ctx g ((n, `(Either ~a ~b)) :: o)) c =>
       let ((n1, newgoal1), (n2, newgoal2)) = !(appDisjL (Ctx g o) (a, b, c)) in
