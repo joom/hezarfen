@@ -76,3 +76,10 @@ evenOrOddSS = %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen')
 
 kCombinator : a -> (b -> a)
 %runElab (hezarfenDecl `{kCombinator})
+
+contrapositive' : (p -> q) -> Not q -> Not p
+%runElab (hezarfenDecl `{contrapositive'})
+
+oddOrEven' : (n : Nat) -> Either (Odd n) (Even n)
+%runElab (add [`{evenOrOdd}] >>= hezarfenDecl' `{oddOrEven'})
+

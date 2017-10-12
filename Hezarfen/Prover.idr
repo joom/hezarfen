@@ -36,7 +36,7 @@ data Context = Ctx (List (TTName, Ty)) (List (TTName, Ty))
 
 ctxPart : Context -> ErrorReportPart
 ctxPart (Ctx xs ys) =
-    SubReport $ [TextPart "(", g xs, TextPart "===>",  g ys, TextPart ")"]
+    SubReport $ [TextPart "(", g xs, TextPart "||",  g ys, TextPart ")"]
   where
     f : (TTName, Ty) -> ErrorReportPart
     f (n, t) = SubReport [TextPart "(", NamePart n,

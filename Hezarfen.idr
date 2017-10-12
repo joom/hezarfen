@@ -45,7 +45,9 @@ hezarfenDecl' : TTName -> Context -> Elab ()
 hezarfenDecl' n c = case !(lookupTy n) of
   [] => fail [TextPart "No type found for", NamePart n]
   [(_, _, tt)] =>
-    do ty <- forget' tt
+    do tt' <- normalise !getEnv tt
+       -- normalization is necessary to change `Not p` into `p -> Void`, etc
+       ty <- forget' tt'
        tm <- breakdown (Seq (c ++ !getCtx) ty)
        let proofTerm = reduceLoop tm
        proofDefn <- definitionize n proofTerm
