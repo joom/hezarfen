@@ -63,14 +63,14 @@ The definition it generates looks like this:
 ```idris
 > :printdef contrapositive'
 contrapositive' : (p -> q) -> Not q -> Not p
-contrapositive' c d e = (\f => void (d f)) (c e)
+contrapositive' c d = void . d . c
 ```
 
 As opposed to:
 ```idris
 > :printdef contrapositive
 contrapositive : (p -> q) -> Not q -> Not p
-contrapositive = \i20, j20, k20 => (\l20 => void (j20 l20)) (i20 k20)
+contrapositive = \i20, j20 => void . j20 . i20
 ```
 
 ***
