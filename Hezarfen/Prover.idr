@@ -158,8 +158,8 @@ mutual
     -- in definitions easily.
     Seq (Ctx g ((p, `(Pair ~a ~b)) :: o)) c =>
       let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
-      pure $ RBind n1 (Let a `(fst {a=~a} {b=~b} ~(Var p)))
-           $ RBind n2 (Let b `(snd {a=~a} {b=~b} ~(Var p)))
+      pure $ RBind n1 (Let a `(Prelude.Basics.fst {a=~a} {b=~b} ~(Var p)))
+           $ RBind n2 (Let b `(Prelude.Basics.snd {a=~a} {b=~b} ~(Var p)))
              !(breakdown newgoal)
     Seq ctx `(Pair ~a ~b) =>
       let (newgoal1, newgoal2) = appConjR ctx (a, b) in
