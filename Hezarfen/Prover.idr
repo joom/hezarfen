@@ -46,15 +46,6 @@ ctxPart (Ctx xs ys) =
 
 data Sequent = Seq Context Ty
 
-concludeWithBotL : Context -> TTName -> Ty -> Tm
-concludeWithBotL (Ctx g o) n c = `(void {a=~c} ~(Var n))
-
-concludeWithInit : Context -> TTName -> Ty -> Tm
-concludeWithInit (Ctx g o) n c = Var n
-
-concludeWithTopR : Context -> Tm
-concludeWithTopR (Ctx g o) = `(MkUnit)
-
 isAtom : Ty -> Bool
 isAtom `(Either ~_ ~_) = False
 isAtom `(Pair ~_ ~_) = False
@@ -150,9 +141,9 @@ mutual
       let newgoal = appImplR n ctx (a, b) in
       let tm = !(breakdown newgoal) in
       pure $ RBind n (Lam a) tm
-    Seq ctx `(Unit) => pure $ concludeWithTopR ctx
+    Seq ctx `(Unit) => pure `(MkUnit)
     Seq (Ctx g ((n, `(Void)) :: o)) c =>
-      pure $ concludeWithBotL (Ctx g o) n c
+      pure `(void {a=~c} ~(Var n))
     -- Unpack the pairs as soon as possible, so that they happen before
     -- the `either`s, which allows us to incorporate them into patterns
     -- in definitions easily.
@@ -221,7 +212,7 @@ mutual
          pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
   eliminate y ((n2, x), ctx) =
     if x == y && isAtom y && isAtom x
-    then pure $ concludeWithInit (Ctx ((n2, x) :: ctx) []) n2 (y)
+    then pure $ Var n2
     else fail [TextPart "Atom comparison failed in eliminate"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
