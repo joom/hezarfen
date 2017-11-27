@@ -63,3 +63,11 @@ hezarfen' n c = case !(lookupTy n) of
 ||| ```
 hezarfen : TTName -> Elab ()
 hezarfen n = hezarfen' n (Ctx [] [])
+
+||| Returns reflected proof term directly
+hezarfenTT : TTName -> Elab TT
+hezarfenTT n =
+  do (_, _, ty) <- lookupTyExact n
+     pf <- prove !(forget' ty)
+     env <- getEnv
+     fst <$> check env pf

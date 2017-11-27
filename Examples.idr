@@ -4,6 +4,7 @@ import Hezarfen
 import Hezarfen.Prover
 
 %language ElabReflection
+%default total
 
 -- You can generate proofs as expressions, but it's better to
 -- generate definitions instead since they are more readable.

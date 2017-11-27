@@ -76,6 +76,10 @@ contrapositive : (p -> q) -> Not q -> Not p
 contrapositive = \i20, j20 => void . j20 . i20
 ```
 
+* Making this available as an edit-time tactic: a tactic that can be run from the editor directly and sent back to the editor. Research on this is still ongoing, but here's a teaser:
+
+![Teaser](https://i.imgur.com/KBAjNda.gif)
+
 ***
 
 *hezarfen* (/hezaɾfæn/, sounds like "has are fan") is a Turkish word that means
