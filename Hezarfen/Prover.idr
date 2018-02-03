@@ -56,8 +56,8 @@ isAtom _ = True
 
 insert : TTName -> Ty -> Context -> Context
 insert n p (Ctx g o) = case p of
-  `((~A -> ~B) -> ~D) => Ctx ((n, p) :: g) o
-  `(~A -> ~B) => if isAtom A then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
+  `((~a -> ~b) -> ~d) => Ctx ((n, p) :: g) o
+  `(~a -> ~b) => if isAtom a then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
   _           => if isAtom p then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
 
 appConjR : Context -> (Ty, Ty) -> (Sequent, Sequent)
