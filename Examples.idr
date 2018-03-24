@@ -90,3 +90,7 @@ swapEither : Either a b -> Either b a
 
 swapDec : Dec a -> Dec (Not a)
 %runElab (hezarfen `{swapDec})
+
+-- Equalities
+eq1 : x = x
+%runElab (hezarfen `{eq1})

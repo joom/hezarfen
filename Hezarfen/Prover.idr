@@ -54,6 +54,7 @@ isAtom `(Either ~_ ~_) = False
 isAtom `(Pair ~_ ~_) = False
 isAtom `(~_ -> ~_) = False
 isAtom `(Unit) = False
+isAtom `((=) {A=~a} {B=~b} ~x ~y) = not (x == y)
 isAtom `(Void) = False
 isAtom _ = True
 
@@ -145,6 +146,7 @@ mutual
       let tm = !(breakdown newgoal) in
       pure $ RBind n (Lam a) tm
     Seq ctx `(Unit) => pure `(MkUnit)
+    Seq ctx `((=) {A=~a} {B=~b} ~x ~y) => pure `(Refl {A=~a} {x=~x})
     Seq (Ctx g ((n, `(Void)) :: o)) c =>
       pure `(void {a=~c} ~(Var n))
     -- Unpack the pairs as soon as possible, so that they happen before
