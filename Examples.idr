@@ -2,6 +2,7 @@ module Examples
 
 import Hezarfen
 import Hezarfen.Prover
+import Hezarfen.Definitions
 
 %language ElabReflection
 %default total
@@ -77,3 +78,15 @@ oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
 
 evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
 %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen' `{evenOrOddSS})
+
+decUnit : Dec Unit
+%runElab (hezarfen `{decUnit})
+
+decVoid : Dec Void
+%runElab (hezarfen `{decVoid})
+
+swapEither : Either a b -> Either b a
+%runElab (hezarfen `{swapEither})
+
+swapDec : Dec a -> Dec (Not a)
+%runElab (hezarfen `{swapDec})

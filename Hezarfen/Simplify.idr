@@ -30,6 +30,7 @@ isBound n t = False
 reduce : Raw -> Raw
 reduce t = case t of
   -- Eta reduction
+  -- (\x => f x) becomes f
   RBind n (Lam b) (RApp t' (Var n')) =>
     if n == n'
       then reduce t'
@@ -65,7 +66,7 @@ reduce t = case t of
     let idk = RConstant Forgot in -- I don't know
     if n == n' && not (n `isBound` g) && not (n `isBound` f)
       then `((.) {c = ~idk} {a = ~b} {b = ~idk} ~(reduce g) ~(reduce f))
-      else t
+      else RBind n (Lam b) (RApp (reduce g) (RApp (reduce f) (Var n')))
 
   RBind n b t' => RBind n b (reduce t')
   RApp t1 t2 => RApp (reduce t1) (reduce t2)

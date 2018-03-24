@@ -1,14 +1,16 @@
-module Prover
+module Hezarfen.Prover
 
+import Hezarfen.Definitions
 import Language.Reflection.Utils
 %access public export
 
 ||| A hacky way to convert any integer to a string.
 ||| It initially tries to get a single character string,
 ||| but if the number is too high then it adds some number afterwards.
-||| Does not generate good variable names for negative numbers.
+||| Does not generate good variable names for negative numbers,
+||| but it's not using `Nat` for performance reasons.
 intToStr : Int -> String
-intToStr i = let d = i `div` 25 in
+intToStr i = assert_total $ let d = i `div` 25 in
              pack [chr (97 + (i `mod` 25))] ++
              (if d == 0 then "" else show d)
 
@@ -47,6 +49,7 @@ ctxPart (Ctx xs ys) =
 data Sequent = Seq Context Ty
 
 isAtom : Ty -> Bool
+isAtom `(Dec ~_) = False
 isAtom `(Either ~_ ~_) = False
 isAtom `(Pair ~_ ~_) = False
 isAtom `(~_ -> ~_) = False
@@ -145,7 +148,7 @@ mutual
     Seq (Ctx g ((n, `(Void)) :: o)) c =>
       pure `(void {a=~c} ~(Var n))
     -- Unpack the pairs as soon as possible, so that they happen before
-    -- the `either`s, which allows us to incorporate them into patterns
+    -- the `Either`s, which allows us to incorporate them into patterns
     -- in definitions easily.
     Seq (Ctx g ((p, `(Pair ~a ~b)) :: o)) c =>
       let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
@@ -157,6 +160,13 @@ mutual
       let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
       pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
     Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown (Seq (Ctx g o) c)
+    Seq (Ctx g ((n, `(Dec ~a)) :: o)) c =>
+      let ((n1, newgoal1), (n2, newgoal2)) =
+        !(appDisjL (Ctx g o) (a, `(~a -> Void), c)) in
+      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      let lm1 = RBind n1 (Lam a) tm1 in
+      let lm2 = RBind n2 (Lam `(~a -> Void)) tm2 in
+      pure `(dec {a=~a} {c=~c} (Delay ~lm1) (Delay ~lm2) ~(Var n))
     Seq (Ctx g ((n, `(Either ~a ~b)) :: o)) c =>
       let ((n1, newgoal1), (n2, newgoal2)) = !(appDisjL (Ctx g o) (a, b, c)) in
       let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
@@ -172,6 +182,16 @@ mutual
       pure $ RBind n' (Let `(~d -> ~e -> ~b)
                             `(curry {c=~b} {b=~e} {a=~d} ~(Var n)))
                       !(breakdown newgoal)
+    Seq (Ctx g ((n, `((Dec ~d) -> ~b)) :: o)) c =>
+      let (n1, n2, newgoal) = !(appDisjImplL (Ctx g o) (d, `(~d -> Void), b, c)) in
+      let (l1, l2) = (!fresh, !fresh) in
+      pure $ RBind n1 (Let `(~d -> ~b)
+                        (RBind l1 (Lam d) (RApp (Var n)
+                          `(Yes {prop=~d} ~(Var l1)))))
+           $ RBind n2 (Let `((~d -> Void) -> ~b)
+                        (RBind l2 (Lam `(~d -> Void)) (RApp (Var n)
+                          `(No {prop=~d} ~(Var l2)))))
+             !(breakdown newgoal)
     Seq (Ctx g ((n, `((Either ~d ~e) -> ~b)) :: o)) c =>
       let (n1, n2, newgoal) = !(appDisjImplL (Ctx g o) (d, e, b, c)) in
       let (l1, l2) = (!fresh, !fresh) in
@@ -182,6 +202,11 @@ mutual
                         (RBind l2 (Lam e) (RApp (Var n)
                           `(Right {a=~d} {b=~e} ~(Var l2)))))
              !(breakdown newgoal)
+    Seq (Ctx g []) `(Dec ~a) =>
+         (searchSync g `(Dec ~a))
+     <|> (do t <- breakdown (Seq (Ctx g []) a); pure `(Yes {prop=~a} ~t))
+     <|> (do t <- breakdown (Seq (Ctx g []) `(~a -> Void)); pure `(No {prop=~a} ~t))
+     <|> hErr "breakdown dec case" goal
     Seq (Ctx g []) `(Either ~a ~b) =>
          (searchSync g `(Either ~a ~b))
      <|> (do t <- breakdown (Seq (Ctx g []) a); pure `(Left {a=~a} {b=~b} ~t))

@@ -1,6 +1,7 @@
 package hezarfen
 
 modules = Hezarfen
+        , Hezarfen.Definitions
         , Hezarfen.Prover
         , Hezarfen.Simplify
         , Hezarfen.FunDefn
