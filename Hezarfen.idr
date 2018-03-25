@@ -33,7 +33,7 @@ add xs = (flip Ctx) [] <$> traverse getTy xs
 hezarfenExpr' : Context -> Elab ()
 hezarfenExpr' c =
   do goal <- forget' (snd !getGoal)
-     fill $ reduceLoop !(breakdown $ Seq (c ++ !getCtx) goal)
+     fill $ reduceLoop !(breakdown False $ Seq (c ++ !getCtx) goal)
      solve
 
 hezarfenExpr : Elab ()
@@ -48,7 +48,7 @@ hezarfen' n c = case !(lookupTy n) of
     do tt' <- normalise !getEnv tt
        -- normalization is necessary to change `Not p` into `p -> Void`, etc
        ty <- forget' tt'
-       tm <- breakdown (Seq (c ++ !getCtx) ty)
+       tm <- breakdown False (Seq (c ++ !getCtx) ty)
        let proofTerm = reduceLoop tm
        proofDefn <- definitionize n proofTerm
        defineFunction proofDefn

@@ -94,3 +94,11 @@ swapDec : Dec a -> Dec (Not a)
 -- Equalities
 eq1 : x = x
 %runElab (hezarfen `{eq1})
+
+eq2 : True = True
+%runElab (hezarfen `{eq2})
+
+-- Treat equalities as an atom if it's not obviously solvable
+eq3 : (x = y) -> (x = y)
+%runElab (hezarfen `{eq3})
+

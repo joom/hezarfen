@@ -127,8 +127,15 @@ hErr s (Seq ctx g) =
        , ctxPart ctx]
 
 mutual
-  breakdown : Sequent -> Elab Tm
-  breakdown goal = case goal of
+  breakdown : (eqIsAtom : Bool) -> Sequent -> Elab Tm
+  breakdown False goal@(Seq ctx `((=) {A=~a} {B=~b} ~x ~y)) =
+    if x == y
+    then pure `(Refl {A=~a} {x=~x})
+    else breakdown True goal
+  breakdown _ goal = breakdown' goal
+
+  breakdown' : Sequent -> Elab Tm
+  breakdown' goal = case goal of
     -- Introduce as many lambdas as soon as possible
     -- This way it's easier to collapse them into function definitions.
     Seq ctx (RBind orig (Pi a _) b) =>
@@ -143,10 +150,9 @@ mutual
                    UN s => if isPrefixOf "__pi_arg" s then newn else orig
                    _ => newn in
       let newgoal = appImplR n ctx (a, b) in
-      let tm = !(breakdown newgoal) in
+      let tm = !(breakdown False newgoal) in
       pure $ RBind n (Lam a) tm
     Seq ctx `(Unit) => pure `(MkUnit)
-    Seq ctx `((=) {A=~a} {B=~b} ~x ~y) => pure `(Refl {A=~a} {x=~x})
     Seq (Ctx g ((n, `(Void)) :: o)) c =>
       pure `(void {a=~c} ~(Var n))
     -- Unpack the pairs as soon as possible, so that they happen before
@@ -156,34 +162,34 @@ mutual
       let (n1, n2, newgoal) = !(appConjL (Ctx g o) (a, b, c)) in
       pure $ RBind n1 (Let a `(Prelude.Basics.fst {a=~a} {b=~b} ~(Var p)))
            $ RBind n2 (Let b `(Prelude.Basics.snd {a=~a} {b=~b} ~(Var p)))
-             !(breakdown newgoal)
+             !(breakdown False newgoal)
     Seq ctx `(Pair ~a ~b) =>
       let (newgoal1, newgoal2) = appConjR ctx (a, b) in
-      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      let (tm1, tm2) = (!(breakdown False newgoal1), !(breakdown False newgoal2)) in
       pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
-    Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown (Seq (Ctx g o) c)
+    Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown False (Seq (Ctx g o) c)
     Seq (Ctx g ((n, `(Dec ~a)) :: o)) c =>
       let ((n1, newgoal1), (n2, newgoal2)) =
         !(appDisjL (Ctx g o) (a, `(~a -> Void), c)) in
-      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      let (tm1, tm2) = (!(breakdown False newgoal1), !(breakdown False newgoal2)) in
       let lm1 = RBind n1 (Lam a) tm1 in
       let lm2 = RBind n2 (Lam `(~a -> Void)) tm2 in
       pure `(dec {a=~a} {c=~c} (Delay ~lm1) (Delay ~lm2) ~(Var n))
     Seq (Ctx g ((n, `(Either ~a ~b)) :: o)) c =>
       let ((n1, newgoal1), (n2, newgoal2)) = !(appDisjL (Ctx g o) (a, b, c)) in
-      let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+      let (tm1, tm2) = (!(breakdown False newgoal1), !(breakdown False newgoal2)) in
       let lm1 = RBind n1 (Lam a) tm1 in
       let lm2 = RBind n2 (Lam b) tm2 in
       pure `(either {c=~c} {b=~b} {a=~a} (Delay ~lm1) (Delay ~lm2) ~(Var n))
     Seq (Ctx g ((n, `(Unit -> ~b)) :: o)) c =>
       let (n', newgoal) = !(appTopImplL (Ctx g o) b c) in
-      pure $ RBind n' (Let b (RApp (Var n) `(MkUnit))) !(breakdown newgoal)
-    Seq (Ctx g ((n, `(Void -> ~b)) :: o)) c => breakdown (Seq (Ctx g o) c)
+      pure $ RBind n' (Let b (RApp (Var n) `(MkUnit))) !(breakdown False newgoal)
+    Seq (Ctx g ((n, `(Void -> ~b)) :: o)) c => breakdown False (Seq (Ctx g o) c)
     Seq (Ctx g ((n, `((Pair ~d ~e) -> ~b)) :: o)) c =>
       let (n', newgoal) = !(appConjImplL (Ctx g o) (d, e, b, c)) in
       pure $ RBind n' (Let `(~d -> ~e -> ~b)
                             `(curry {c=~b} {b=~e} {a=~d} ~(Var n)))
-                      !(breakdown newgoal)
+                      !(breakdown False newgoal)
     Seq (Ctx g ((n, `((Dec ~d) -> ~b)) :: o)) c =>
       let (n1, n2, newgoal) = !(appDisjImplL (Ctx g o) (d, `(~d -> Void), b, c)) in
       let (l1, l2) = (!fresh, !fresh) in
@@ -193,7 +199,7 @@ mutual
            $ RBind n2 (Let `((~d -> Void) -> ~b)
                         (RBind l2 (Lam `(~d -> Void)) (RApp (Var n)
                           `(No {prop=~d} ~(Var l2)))))
-             !(breakdown newgoal)
+             !(breakdown False newgoal)
     Seq (Ctx g ((n, `((Either ~d ~e) -> ~b)) :: o)) c =>
       let (n1, n2, newgoal) = !(appDisjImplL (Ctx g o) (d, e, b, c)) in
       let (l1, l2) = (!fresh, !fresh) in
@@ -203,17 +209,17 @@ mutual
            $ RBind n2 (Let `(~e -> ~b)
                         (RBind l2 (Lam e) (RApp (Var n)
                           `(Right {a=~d} {b=~e} ~(Var l2)))))
-             !(breakdown newgoal)
+             !(breakdown False newgoal)
     Seq (Ctx g []) `(Dec ~a) =>
          (searchSync g `(Dec ~a))
-     <|> (do t <- breakdown (Seq (Ctx g []) a); pure `(Yes {prop=~a} ~t))
-     <|> (do t <- breakdown (Seq (Ctx g []) `(~a -> Void)); pure `(No {prop=~a} ~t))
-     <|> hErr "breakdown dec case" goal
+     <|> (do t <- breakdown False (Seq (Ctx g []) a); pure `(Yes {prop=~a} ~t))
+     <|> (do t <- breakdown False (Seq (Ctx g []) `(~a -> Void)); pure `(No {prop=~a} ~t))
+     <|> hErr "breakdown False dec case" goal
     Seq (Ctx g []) `(Either ~a ~b) =>
          (searchSync g `(Either ~a ~b))
-     <|> (do t <- breakdown (Seq (Ctx g []) a); pure `(Left {a=~a} {b=~b} ~t))
-     <|> (do t <- breakdown (Seq (Ctx g []) b); pure `(Right {a=~a} {b=~b} ~t))
-     <|> hErr "breakdown either case" goal
+     <|> (do t <- breakdown False (Seq (Ctx g []) a); pure `(Left {a=~a} {b=~b} ~t))
+     <|> (do t <- breakdown False (Seq (Ctx g []) b); pure `(Right {a=~a} {b=~b} ~t))
+     <|> hErr "breakdown False either case" goal
     Seq (Ctx g []) c => searchSync g c
     _ => hErr "breakdown" goal
 
@@ -225,7 +231,7 @@ mutual
   eliminate c ((n, `((~d -> ~e) -> ~b)), ctx) =
     let ((a1, a2, newgoal1), (a3, newgoal2)) =
       !(appImplImplL (Ctx ctx []) (d, e, b, c)) in
-    let (tm1, tm2) = (!(breakdown newgoal1), !(breakdown newgoal2)) in
+    let (tm1, tm2) = (!(breakdown False newgoal1), !(breakdown False newgoal2)) in
     let n' = !fresh in
     let q = RBind a2 (Lam `(~e -> ~b)) (RBind a1 (Lam d) tm1) in
     pure $ RApp (RBind a3 (Lam b) tm2) $
@@ -235,7 +241,7 @@ mutual
     if not (isAtom x)
     then fail [RawPart x, TextPart "is not an atom"]
     else let (n', newgoal, m) = !(appAtomImplL ctx (x, b, c)) in
-         let tm = !(breakdown newgoal) in
+         let tm = !(breakdown False newgoal) in
          pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
   eliminate y ((n2, x), ctx) =
     if x == y && isAtom y && isAtom x
@@ -244,4 +250,4 @@ mutual
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
 prove : Ty -> Elab Tm
-prove c = breakdown (Seq (Ctx [] []) c)
+prove c = breakdown False (Seq (Ctx [] []) c)
