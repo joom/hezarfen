@@ -23,7 +23,10 @@ subst n u t = pure t
 isBound : (n : TTName) -> (t : Raw) -> Bool
 isBound n (Var n') = n == n'
 isBound n (RBind n' b t) =
-  if n == n' then or (map (Delay . isBound n) b) else isBound n t
+  -- if n == n' then or (map (Delay . isBound n) b) else isBound n t
+  if n == n'
+  then or (map (Delay . isBound n) b)
+  else isBound n t || or (map (Delay . isBound n) b)
 isBound n (RApp t1 t2) = (isBound n t1) || (isBound n t2)
 isBound n t = False
 
@@ -67,6 +70,18 @@ reduce t = case t of
     if n == n' && not (n `isBound` g) && not (n `isBound` f)
       then `((.) {c = ~idk} {a = ~b} {b = ~idk} ~(reduce g) ~(reduce f))
       else RBind n (Lam b) (RApp (reduce g) (RApp (reduce f) (Var n')))
+
+  -- (let x = t in x) becomes t
+  RBind n (Let ty v) (Var n') =>
+    if n == n'
+    then v
+    else (Var n') -- let binding unused, so remove
+
+  -- If a let binding isn't used, remove it.
+  RBind n (Let ty v) t' =>
+    if n `isBound` t'
+    then RBind n (Let ty v) (reduce t')
+    else reduce t'
 
   RBind n b t' => RBind n b (reduce t')
   RApp t1 t2 => RApp (reduce t1) (reduce t2)

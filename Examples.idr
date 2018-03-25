@@ -30,6 +30,12 @@ f5 : (p -> q, p -> r) -> p -> (q, r)
 f6 : (((a -> b) -> c) -> d) -> ((a -> b) -> c) -> (a -> b) -> d
 %runElab (hezarfen `{f6})
 
+myFst : (a, b) -> a
+%runElab (hezarfen `{myFst})
+
+mySnd : (a, b) -> b
+%runElab (hezarfen `{mySnd})
+
 demorgan1 : Not (Either p q) -> (Not p, Not q)
 %runElab (hezarfen `{demorgan1})
 
@@ -101,4 +107,3 @@ eq2 : True = True
 -- Treat equalities as an atom if it's not obviously solvable
 eq3 : (x = y) -> (x = y)
 %runElab (hezarfen `{eq3})
-
