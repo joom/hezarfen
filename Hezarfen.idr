@@ -59,17 +59,20 @@ hezarfen' n c = case !(lookupTy n) of
 ||| Example usage:
 ||| ```
 ||| f : a -> a
-||| %runElab (hezarfenDecl `{f})
+||| derive f
 ||| ```
 hezarfen : TTName -> Elab ()
 hezarfen n = hezarfen' n (Ctx [] [])
 
 ||| Returns reflected proof term directly
-hezarfenTT : TTName -> Elab TT
-hezarfenTT n =
+hezarfenTT : (shouldReduce : Bool) -> TTName -> Elab TT
+hezarfenTT b n =
   do (_, _, ty) <- lookupTyExact n
      pf <- prove !(forget' ty)
+     pf' <- (if b then reduceLoop else pure) pf
      env <- getEnv
-     fst <$> check env pf
+     fst <$> check env pf'
 
-decl syntax derive {n} = %runElab (hezarfen `{n})
+decl syntax "derive" {n} = %runElab (hezarfen `{n})
+
+decl syntax "obtain" {n} "from" [xs] = %runElab (hezarfen' `{n} !(add xs))

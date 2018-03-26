@@ -46,11 +46,12 @@ evenOrOdd : (n : Nat) -> Either (Even n) (Odd n)
 ... -- some definition of an existing lemma
 
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
-%runElab (add [`{evenOrOdd}] >>= hezarfen' `{oddOrEven})
+%runElab (hezarfen' `{oddOrEven} !(add [`{evenOrOdd}]))
 
 -- something more complex, but passing the constructors for Even and Odd
+-- using the more readable syntax
 evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
-%runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen' `{evenOrOddSS})
+obtain evenOrOddSS from [`{evenOrOdd}, `{EvenSS}, `{OddSS}]
 ```
 
 The last example is beyond the logic Hezarfen is trying to decide. `Even n` and `Even (S (S n))` happen to be one function away, namely `EvenSS`.

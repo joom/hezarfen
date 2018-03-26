@@ -69,12 +69,6 @@ insert n p (Ctx g o) = case p of
   `(~a -> ~b) => if isAtom a then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
   _           => if isAtom p then Ctx ((n, p) :: g) o else Ctx g ((n, p) :: o)
 
-appConjR : Context -> (Ty, Ty) -> (Sequent, Sequent)
-appConjR ctx (a, b) = (Seq ctx a, Seq ctx b)
-
-appImplR : TTName -> Context -> (Ty, Ty) -> Sequent
-appImplR n ctx (a, b) = Seq (insert n a ctx) b
-
 appConjL : Context -> (Ty, Ty, Ty) -> Elab (TTName, TTName, Sequent)
 appConjL ctx (a, b, c) =
   let (n1, n2) = (!fresh, !fresh) in
@@ -102,9 +96,6 @@ appDisjL ctx (a, b, c) =
   let (n1, n2) = (!fresh, !fresh) in
   let (ctx1, ctx2) = (insert n1 a ctx, insert n2 b ctx) in
   pure ((n1, Seq ctx1 c), (n2, Seq ctx2 c))
-
-appEqL : Context -> (Ty, Ty) -> Elab (TTName, Sequent)
-appEqL ctx (a, c) = let n1 = !fresh in pure (n1, Seq (insert n1 a ctx) c)
 
 appConjImplL : Context -> (Ty, Ty, Ty, Ty) -> Elab (TTName, Sequent)
 appConjImplL (Ctx g o) (d, e, b, c) =
@@ -157,7 +148,7 @@ mutual
       let n = case orig of
                    UN s => if isPrefixOf "__pi_arg" s then newn else orig
                    _ => newn in
-      let newgoal = appImplR n ctx (a, b) in
+      let newgoal = Seq (insert n a ctx) b in
       let tm = !(breakdown False newgoal) in
       pure $ RBind n (Lam a) tm
     Seq ctx `(Unit) => pure `(MkUnit)
@@ -172,8 +163,7 @@ mutual
            $ RBind n2 (Let b `(Prelude.Basics.snd {a=~a} {b=~b} ~(Var p)))
              !(breakdown False newgoal)
     Seq ctx `(Pair ~a ~b) =>
-      let (newgoal1, newgoal2) = appConjR ctx (a, b) in
-      let (tm1, tm2) = (!(breakdown False newgoal1), !(breakdown False newgoal2)) in
+      let (tm1, tm2) = (!(breakdown False (Seq ctx a)), !(breakdown False (Seq ctx b))) in
       pure `(MkPair {A=~a} {B=~b} ~tm1 ~tm2)
     Seq (Ctx g ((_, `(Unit)) :: o)) c => breakdown False (Seq (Ctx g o) c)
     Seq (Ctx g ((n, `(Dec ~a)) :: o)) c =>

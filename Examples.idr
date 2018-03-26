@@ -63,10 +63,12 @@ derive contrapositive
 -- Examples with default values for some types
 
 nat : Nat
-%runElab (add [`{Z}] >>= hezarfen' `{nat})
+%runElab (hezarfen' `{nat} !(add [`{Z}]))
+
+-- Using the more readable syntax
 
 bool : (Bool, a -> a)
-%runElab (add [`{True}] >>= hezarfen' `{bool})
+obtain bool from [`{True}]
 
 -- Using a lemma
 data Even : Nat -> Type where
@@ -85,10 +87,10 @@ evenOrOdd (S (S n)) = case evenOrOdd n of
                            Right o => Right $ OddSS o
 
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
-%runElab (add [`{evenOrOdd}] >>= hezarfen' `{oddOrEven})
+obtain oddOrEven from [`{evenOrOdd}]
 
 evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
-%runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen' `{evenOrOddSS})
+obtain evenOrOddSS from [`{evenOrOdd}, `{EvenSS}, `{OddSS}]
 
 decUnit : Dec Unit
 derive decUnit
@@ -133,3 +135,6 @@ derive congS
 
 decCongB : x = y -> Dec (not x = not y)
 derive decCongB
+
+twoToThree : (x = y, y = z) -> (z = y, y = y, y = x)
+derive twoToThree
