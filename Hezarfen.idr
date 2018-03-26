@@ -71,3 +71,5 @@ hezarfenTT n =
      pf <- prove !(forget' ty)
      env <- getEnv
      fst <$> check env pf
+
+decl syntax derive {n} = %runElab (hezarfen `{n})

@@ -14,8 +14,9 @@ subst n u (RBind n' b t) =
   if n == n'
     then RBind n' <$> sequence (map (subst n u) b) <*> pure t
     else do fr <- fresh
+            t' <- subst n' (Var fr) t
             RBind fr <$> sequence (map (subst n u) b)
-                     <*> subst n' (Var fr) t
+                     <*> subst n u t'
 subst n u (RApp t1 t2) = RApp <$> subst n u t1 <*> subst n u t2
 subst n u t = pure t
 
@@ -73,7 +74,6 @@ reduce t = case t of
   -- It works for now if we erase the types in the composition.
   -- We might need to test this more.
   RBind n (Lam b) (RApp g (RApp f (Var n'))) => do
-    let idk = RConstant Forgot -- I don't know
     g' <- reduce g
     f' <- reduce f
     if n == n' && not (n `isBound` g) && not (n `isBound` f)
@@ -91,10 +91,9 @@ reduce t = case t of
     case countOccurrences n t' of
       -- If a let binding isn't used, remove it.
       Z => pure t''
-      -- TODO
       -- If a let binding is only used once,
       -- remove the binding and replace the occurrence
-      -- S Z => subst n v t''
+      S Z => subst n v t''
       -- If it's used more than once, leave the binding
       _ => pure $ RBind n (Let ty v) t''
 

@@ -3,6 +3,11 @@ module Hezarfen.Prover
 import Hezarfen.Definitions
 import Language.Reflection.Utils
 %access public export
+%hide Prelude.Stream.(::)
+
+||| `Erased` for `Raw`. `idk` standing for "I don't know"
+idk : Raw
+idk = RConstant Forgot
 
 ||| A hacky way to convert any integer to a string.
 ||| It initially tries to get a single character string,
@@ -97,6 +102,9 @@ appDisjL ctx (a, b, c) =
   let (n1, n2) = (!fresh, !fresh) in
   let (ctx1, ctx2) = (insert n1 a ctx, insert n2 b ctx) in
   pure ((n1, Seq ctx1 c), (n2, Seq ctx2 c))
+
+appEqL : Context -> (Ty, Ty) -> Elab (TTName, Sequent)
+appEqL ctx (a, c) = let n1 = !fresh in pure (n1, Seq (insert n1 a ctx) c)
 
 appConjImplL : Context -> (Ty, Ty, Ty, Ty) -> Elab (TTName, Sequent)
 appConjImplL (Ctx g o) (d, e, b, c) =
@@ -214,12 +222,12 @@ mutual
          (searchSync g `(Dec ~a))
      <|> (do t <- breakdown False (Seq (Ctx g []) a); pure `(Yes {prop=~a} ~t))
      <|> (do t <- breakdown False (Seq (Ctx g []) `(~a -> Void)); pure `(No {prop=~a} ~t))
-     <|> hErr "breakdown False dec case" goal
+     <|> hErr "breakdown dec case" goal
     Seq (Ctx g []) `(Either ~a ~b) =>
          (searchSync g `(Either ~a ~b))
      <|> (do t <- breakdown False (Seq (Ctx g []) a); pure `(Left {a=~a} {b=~b} ~t))
      <|> (do t <- breakdown False (Seq (Ctx g []) b); pure `(Right {a=~a} {b=~b} ~t))
-     <|> hErr "breakdown False either case" goal
+     <|> hErr "breakdown either case" goal
     Seq (Ctx g []) c => searchSync g c
     _ => hErr "breakdown" goal
 
@@ -243,9 +251,23 @@ mutual
     else let (n', newgoal, m) = !(appAtomImplL ctx (x, b, c)) in
          let tm = !(breakdown False newgoal) in
          pure $ RApp (RBind n' (Lam b) tm) (RApp (Var n) (Var m))
-  eliminate y ((n2, x), ctx) =
-    if x == y && isAtom y && isAtom x
-    then pure $ Var n2
+  eliminate `((=) {A=~a1} {B=~b1} ~(RApp f x1) ~(RApp g y1)) ((n, `((=) {A=~a2} {B=~b2} ~x2 ~y2)), ctx) =
+    if ((x1 == x2) && (y1 == y2) && (f == g))
+    then pure `(cong {u=~idk} {t=~a2} {b=~y2} {a=~x2} {f = ~f} ~(Var n))
+    else if ((x2 == RApp f x1) && (y2 == RApp g y1))
+    then pure (Var n)
+    else fail [ NamePart `{(=)}, TextPart "comparison failed in eliminate and"
+              , NamePart `{cong}, TextPart "not applicable"]
+  eliminate `((=) {A=~a1} {B=~b1} ~x1 ~y1) ((n, `((=) {A=~a2} {B=~b2} ~x2 ~y2)), ctx) =
+    if ((x1 == y2) && (x2 == y1))
+    then pure `(sym {b=~idk} {a=~idk} {left=~x2} {right=~y2} ~(Var n))
+    else if ((x1 == x2) && (y1 == y2))
+    then pure (Var n)
+    else fail [ NamePart `{(=)}, TextPart "comparison failed in eliminate and"
+              , NamePart `{sym}, TextPart "not applicable"]
+  eliminate y ((n, x), ctx) =
+    if x == y
+    then pure (Var n)
     else fail [TextPart "Atom comparison failed in eliminate"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 

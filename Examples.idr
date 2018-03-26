@@ -15,45 +15,50 @@ f1 = %runElab hezarfenExpr
 
 -- `f1` is generated as an expression, the rest will be definitions.
 
+f1' : (a -> b) -> (b -> c) -> a -> c
+%runElab (hezarfen `{f1'})
+
+-- You can also use the `derive` syntax.
+
 f2 : (a -> b) -> (b -> c) -> (c -> d) -> a -> d
-%runElab (hezarfen `{f2})
+derive f2
 
 f3 : Either a (Either b c) -> Either (Either a b) c
-%runElab (hezarfen `{f3})
+derive f3
 
 f4 : (a, b, c) -> (c, b, a)
-%runElab (hezarfen `{f4})
+derive f4
 
 f5 : (p -> q, p -> r) -> p -> (q, r)
-%runElab (hezarfen `{f5})
+derive f5
 
 f6 : (((a -> b) -> c) -> d) -> ((a -> b) -> c) -> (a -> b) -> d
-%runElab (hezarfen `{f6})
+derive f6
 
 myFst : (a, b) -> a
-%runElab (hezarfen `{myFst})
+derive myFst
 
 mySnd : (a, b) -> b
-%runElab (hezarfen `{mySnd})
+derive mySnd
 
 demorgan1 : Not (Either p q) -> (Not p, Not q)
-%runElab (hezarfen `{demorgan1})
+derive demorgan1
 
 demorgan2 : (Not p, Not q) -> Not (Either p q)
-%runElab (hezarfen `{demorgan2})
+derive demorgan2
 
 demorgan3 : Either (Not p) (Not q) -> Not (p, q)
-%runElab (hezarfen `{demorgan3})
+derive demorgan3
 
 -- This one is classical so it cannot be proved by Hezarfen
 -- demorgan4 : Not (p, q) -> Either (Not p) (Not q)
 -- demorgan4 = %runElab hezarfen
 
 noContradiction : Not (p , Not p)
-%runElab (hezarfen `{noContradiction})
+derive noContradiction
 
 contrapositive : (p -> q) -> (Not q -> Not p)
-%runElab (hezarfen `{contrapositive})
+derive contrapositive
 
 -- Examples with default values for some types
 
@@ -86,24 +91,45 @@ evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
 %runElab (add [`{evenOrOdd}, `{EvenSS}, `{OddSS}] >>= hezarfen' `{evenOrOddSS})
 
 decUnit : Dec Unit
-%runElab (hezarfen `{decUnit})
+derive decUnit
 
 decVoid : Dec Void
-%runElab (hezarfen `{decVoid})
+derive decVoid
 
 swapEither : Either a b -> Either b a
-%runElab (hezarfen `{swapEither})
+derive swapEither
 
 swapDec : Dec a -> Dec (Not a)
-%runElab (hezarfen `{swapDec})
+derive swapDec
+
+notDec : Not a -> Dec a
+derive notDec
 
 -- Equalities
 eq1 : x = x
-%runElab (hezarfen `{eq1})
+derive eq1
 
 eq2 : True = True
-%runElab (hezarfen `{eq2})
+derive eq2
 
 -- Treat equalities as an atom if it's not obviously solvable
 eq3 : (x = y) -> (x = y)
-%runElab (hezarfen `{eq3})
+derive eq3
+
+eq4 : True = False -> False = True
+derive eq4
+
+eq5 : x = y -> y = x
+derive eq5
+
+eqDec : x = y -> Dec (y = x)
+derive eqDec
+
+eqEither : Either (x = y) (y = z) -> Either (z = y) (y = x)
+derive eqEither
+
+congS : x = y -> S x = S y
+derive congS
+
+decCongB : x = y -> Dec (not x = not y)
+derive decCongB
