@@ -126,6 +126,9 @@ hErr s (Seq ctx g) =
        , ctxPart ctx]
 
 mutual
+  ||| The entry point if you want to specify a context.
+  ||| The `Bool` argument is a workaround for the lack of
+  ||| Haskell-style pattern guards. Initially that argument should be `False`.
   breakdown : (eqIsAtom : Bool) -> Sequent -> Elab Tm
   breakdown False goal@(Seq ctx `((=) {A=~a} {B=~b} ~x ~y)) =
     if x == y
@@ -261,5 +264,6 @@ mutual
     else fail [TextPart "Atom comparison failed in eliminate"]
   eliminate _ _ = fail [TextPart "No rule applies in eliminate"]
 
+||| The entry point if there's an empty context.
 prove : Ty -> Elab Tm
 prove c = breakdown False (Seq (Ctx [] []) c)

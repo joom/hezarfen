@@ -3,7 +3,7 @@
 An Idris implementation of a theorem prover for [Roy Dyckhoff's
 LJT](https://rd.host.cs.st-andrews.ac.uk/publications/jsl57.pdf), a sequent
 calculus for propositional intuitionistic logic that is decidable and does
-_not_ need loop checking.  Ported from [Ayberk Tosun's Standard ML
+_not_ need loop checking. Initially ported from [Ayberk Tosun's Standard ML
 implementation](https://github.com/ayberkt/sequents).
 
 The main goal of the project is to make use of the [elaborator
@@ -54,7 +54,18 @@ evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
 obtain evenOrOddSS from [`{evenOrOdd}, `{EvenSS}, `{OddSS}]
 ```
 
-The last example is beyond the logic Hezarfen is trying to decide. `Even n` and `Even (S (S n))` happen to be one function away, namely `EvenSS`.
+We also have a Coq-style hint database system that lets us keep a list of hint names that will be used to prove theorems. To use the hints in proofs, change `derive` to `derive'` and `obtain` to `obtain'`. Then the names in the hint database will automatically added to the context in which the theorem prover runs.
+
+```idris
+hint evenOrOdd
+hint EvenSS
+hint OddSS
+
+evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
+derive' evenOrOddSS
+```
+
+The even/odd example is beyond the logic Hezarfen is trying to decide. `Even n` and `Even (S (S n))` happen to be one function away, namely `EvenSS`.
 
 Hezarfen attempts to prove a tiny bit more than propositional intuitionistic logic,
 especially when it comes to equalities and `Dec`.

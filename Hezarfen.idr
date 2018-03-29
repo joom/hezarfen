@@ -3,6 +3,7 @@ module Hezarfen
 import Hezarfen.Prover
 import Hezarfen.Simplify
 import Hezarfen.FunDefn
+import Hezarfen.Hint
 import Language.Reflection.Utils
 
 %access public export
@@ -40,9 +41,8 @@ hezarfenExpr : Elab ()
 hezarfenExpr = hezarfenExpr' (Ctx [] [])
 
 -- Generate declarations
-
-hezarfen' : TTName -> Context -> Elab ()
-hezarfen' n c = case !(lookupTy n) of
+hezarfenDecl : TTName -> Context -> Elab (FunDefn Raw)
+hezarfenDecl n c = case !(lookupTy n) of
   [] => fail [TextPart "No type found for", NamePart n]
   [(_, _, tt)] =>
     do tt' <- normalise !getEnv tt
@@ -50,9 +50,11 @@ hezarfen' n c = case !(lookupTy n) of
        ty <- forget' tt'
        tm <- breakdown False (Seq (c ++ !getCtx) ty)
        proofTerm <- reduceLoop tm
-       proofDefn <- definitionize n proofTerm
-       defineFunction proofDefn
+       definitionize n proofTerm
   _ => fail [TextPart "Ambiguity: multiple types found for", NamePart n]
+
+hezarfen' : TTName -> Context -> Elab ()
+hezarfen' n c = defineFunction !(hezarfenDecl n c)
 
 ||| Generates a function definition for a previously undefined name.
 ||| Note that there should already be a type signature for that name.
@@ -74,5 +76,8 @@ hezarfenTT b n =
      fst <$> check env pf'
 
 decl syntax "derive" {n} = %runElab (hezarfen `{n})
+decl syntax "derive'" {n} = %runElab (hezarfen' `{n} !(add !getHints))
 
 decl syntax "obtain" {n} "from" [xs] = %runElab (hezarfen' `{n} !(add xs))
+decl syntax "obtain'" {n} "from" [xs] =
+  %runElab (hezarfen' `{n} !(add (Prelude.List.(++) xs !getHints)))

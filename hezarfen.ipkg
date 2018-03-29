@@ -5,3 +5,4 @@ modules = Hezarfen
         , Hezarfen.Prover
         , Hezarfen.Simplify
         , Hezarfen.FunDefn
+        , Hezarfen.Hint

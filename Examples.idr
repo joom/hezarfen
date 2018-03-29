@@ -1,6 +1,7 @@
 module Examples
 
 import Hezarfen
+import Hezarfen.Hint
 import Hezarfen.Prover
 import Hezarfen.Definitions
 
@@ -86,11 +87,16 @@ evenOrOdd (S (S n)) = case evenOrOdd n of
                            Left ev => Left $ EvenSS ev
                            Right o => Right $ OddSS o
 
+-- You can also use a hint database
+hint evenOrOdd
+hint EvenSS
+hint OddSS
+
 oddOrEven : (n : Nat) -> Either (Odd n) (Even n)
-obtain oddOrEven from [`{evenOrOdd}]
+derive' oddOrEven -- derive using hints
 
 evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
-obtain evenOrOddSS from [`{evenOrOdd}, `{EvenSS}, `{OddSS}]
+derive' evenOrOddSS
 
 decUnit : Dec Unit
 derive decUnit
@@ -106,6 +112,9 @@ derive swapDec
 
 notDec : Not a -> Dec a
 derive notDec
+
+decNotNot : Dec p -> (Not p -> Void) -> p
+derive decNotNot
 
 -- Equalities
 eq1 : x = x
