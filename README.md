@@ -54,7 +54,7 @@ evenOrOddSS : (n : Nat) -> Either (Even (S (S n))) (Odd (S (S n)))
 obtain evenOrOddSS from [`{evenOrOdd}, `{EvenSS}, `{OddSS}]
 ```
 
-We also have a Coq-style hint database system that lets us keep a list of hint names that will be used to prove theorems. To use the hints in proofs, change `derive` to `derive'` and `obtain` to `obtain'`. Then the names in the hint database will automatically added to the context in which the theorem prover runs.
+We also have a Coq-style hint database system that lets us keep a list of hint names that will be used to prove theorems. To use the hints in proofs, change `derive` to `derive'` and `obtain` to `obtain'`. Then the names in the hint database will be automatically added to the context in which the theorem prover runs.
 
 ```idris
 hint evenOrOdd
