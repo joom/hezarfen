@@ -41,6 +41,11 @@ Tm = Raw
 
 data Context = Ctx (List (TTName, Ty)) (List (TTName, Ty))
 
+implementation Semigroup Context where
+  (Ctx xs ys) <+> (Ctx xs' ys') = Ctx (xs ++ xs') (ys ++ ys')
+implementation Monoid Context where
+  neutral = Ctx [] []
+
 ctxPart : Context -> ErrorReportPart
 ctxPart (Ctx xs ys) =
     SubReport $ [TextPart "(", g xs, TextPart "||",  g ys, TextPart ")"]

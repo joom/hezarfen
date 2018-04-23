@@ -147,3 +147,6 @@ derive decCongB
 
 twoToThree : (x = y, y = z) -> (z = y, y = y, y = x)
 derive twoToThree
+
+doesntLoop : (a -> b) -> (b -> a) -> a -> b
+derive doesntLoop

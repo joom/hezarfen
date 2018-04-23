@@ -1,4 +1,7 @@
 .DS_Store
 *.ibc
+*.idh
+*.tex
+*.html
 *.o
 Editor.idr

@@ -8,9 +8,6 @@ import Language.Reflection.Utils
 
 %access public export
 
-(++) : Context -> Context -> Context
-(Ctx xs ys) ++ (Ctx xs' ys') = Ctx (xs ++ xs') (ys ++ ys')
-
 forget' : TT -> Elab Raw
 forget' t = case forget t of
                  Nothing => fail [TextPart "Couldn't forget type"]
@@ -34,11 +31,11 @@ add xs = (flip Ctx) [] <$> traverse getTy xs
 hezarfenExpr' : Context -> Elab ()
 hezarfenExpr' c =
   do goal <- forget' (snd !getGoal)
-     fill !(reduceLoop !(breakdown False $ Seq (c ++ !getCtx) goal))
+     fill !(reduceLoop !(breakdown False $ Seq (c <+> !getCtx) goal))
      solve
 
 hezarfenExpr : Elab ()
-hezarfenExpr = hezarfenExpr' (Ctx [] [])
+hezarfenExpr = hezarfenExpr' neutral
 
 -- Generate declarations
 hezarfenDecl : TTName -> Context -> Elab (FunDefn Raw)
@@ -48,7 +45,7 @@ hezarfenDecl n c = case !(lookupTy n) of
     do tt' <- normalise !getEnv tt
        -- normalization is necessary to change `Not p` into `p -> Void`, etc
        ty <- forget' tt'
-       tm <- breakdown False (Seq (c ++ !getCtx) ty)
+       tm <- breakdown False (Seq (c <+> !getCtx) ty)
        proofTerm <- reduceLoop tm
        definitionize n proofTerm
   _ => fail [TextPart "Ambiguity: multiple types found for", NamePart n]
@@ -64,13 +61,13 @@ hezarfen' n c = defineFunction !(hezarfenDecl n c)
 ||| derive f
 ||| ```
 hezarfen : TTName -> Elab ()
-hezarfen n = hezarfen' n (Ctx [] [])
+hezarfen n = hezarfen' n neutral
 
 ||| Returns reflected proof term directly
 hezarfenTT : (shouldReduce : Bool) -> TTName -> Elab TT
 hezarfenTT b n =
   do (_, _, ty) <- lookupTyExact n
-     pf <- prove !(forget' ty)
+     pf <- breakdown False (Seq !getCtx !(forget' ty))
      pf' <- (if b then reduceLoop else pure) pf
      env <- getEnv
      fst <$> check env pf'

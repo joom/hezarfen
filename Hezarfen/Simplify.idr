@@ -2,6 +2,7 @@ module Hezarfen.Simplify
 
 import Hezarfen.Prover
 import Language.Reflection.Utils
+import Language.Reflection.Elab
 
 %access public export
 
