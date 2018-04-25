@@ -81,6 +81,19 @@ derive decCongB
 
 For details, look at [Examples.idr](https://github.com/joom/hezarfen/blob/master/Examples.idr).
 
+## Edit-Time Tactics
+
+The original purpose of Hezarfen was to be a part of a master's thesis on
+"edit-time tactics", meaning that we would be able to run it from the editor.
+Then it would be an alternative to the built-in proof search in Idris.
+[Here](http://cattheory.com/editTimeTacticsDraft.pdf) is the draft of the
+thesis. And below you can see how it works in the editor:
+
+[![Screencast of how Hezarfen works in Emacs](https://asciinema.org/a/178281.png)](https://asciinema.org/a/178281)
+
+The feature that allows this has not landed on the Idris compiler or the Idris
+mode yet, but it should be merged soon!
+
 ## Future Work
 
 Some support for deriving terms with type classes can be implemented, à la Djinn.
@@ -103,10 +116,6 @@ As opposed to proof term:
 contrapositive : (p -> q) -> Not q -> Not p
 contrapositive = \i20, j20 => void . j20 . i20
 ```
-
-* Making this available as an edit-time tactic: a tactic that can be run from the editor directly and sent back to the editor. Research on this is still ongoing, but here's a teaser:
-
-![Teaser](https://i.imgur.com/KBAjNda.gif)
 
 ***
 
