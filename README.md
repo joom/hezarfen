@@ -89,7 +89,7 @@ Then it would be an alternative to the built-in proof search in Idris.
 [Here](http://cattheory.com/editTimeTacticsDraft.pdf) is the draft of the
 thesis. And below you can see how it works in the editor:
 
-[![Screencast of how Hezarfen works in Emacs](https://asciinema.org/a/178281.png)](https://asciinema.org/a/178281)
+[![Screencast of how Hezarfen works in Emacs](https://asciinema.org/a/rrwboxAr2VdiUQsZov0RDinJw.png)](https://asciinema.org/a/rrwboxAr2VdiUQsZov0RDinJw)
 
 The feature that allows this has not landed on the Idris compiler or the Idris
 mode yet, but it should be merged soon!
