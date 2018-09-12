@@ -1,7 +1,7 @@
 # Hezarfen
 
 An Idris implementation of a theorem prover for [Roy Dyckhoff's
-LJT](https://rd.host.cs.st-andrews.ac.uk/publications/jsl57.pdf), a sequent
+LJT](https://scholar.google.com/scholar?cluster=14155439887209124225), a sequent
 calculus for propositional intuitionistic logic that is decidable and does
 _not_ need loop checking. Initially ported from [Ayberk Tosun's Standard ML
 implementation](https://github.com/ayberkt/sequents).
